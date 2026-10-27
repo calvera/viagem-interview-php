@@ -1,0 +1,54 @@
+services:
+  db:
+    image: mariadb:10.11
+    command:
+      - --sql-mode=
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_czech_ci
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: legacy_crm
+      MARIADB_USER: crm
+      MARIADB_PASSWORD: crm
+    volumes:
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+      - dbdata:/var/lib/mysql
+    ports:
+      - "33061:3306"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
+      start_period: 900s
+
+  php74:
+    build:
+      context: .
+      dockerfile: docker/php74/Dockerfile
+    ports:
+      - "8074:80"
+    volumes:
+      - ./:/var/www/html
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  php85:
+    build:
+      context: .
+      dockerfile: docker/php85/Dockerfile
+    ports:
+      - "8085:80"
+    volumes:
+      - ./:/var/www/html
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  dbdata:
