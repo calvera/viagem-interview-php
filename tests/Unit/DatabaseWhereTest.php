@@ -88,6 +88,14 @@ class DatabaseWhereTest extends TestCase
     );
   }
 
+  public function testBoundPlaceholderIsLeftUnchanged()
+  {
+    $this->db->bindParam('f_type', "x' or '1'='1");
+
+    $this->assertSame(' where o.type = :f_type', $this->db->getWhere(array('o.type = :f_type')));
+    $this->assertSame(array(':f_type' => "x' or '1'='1"), $this->db->bind_params);
+  }
+
   public function testParameterNameCollision()
   {
     $sql = $this->db->getWhere(array('id = 1', 'id = 2', 'id = 3'));

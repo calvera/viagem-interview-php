@@ -11,9 +11,10 @@ test('cancelling the delete dialog keeps the note', async ({ page }) => {
   await expect(note).toBeVisible();
   const url = page.url();
 
-  // Safety net: a delete request must never reach the app, even if the confirm handler is broken.
+  // Safety net: no POST (delete) may reach the app, even if the confirm handler is broken.
   let deleteRequested = false;
-  await page.route(/delete_note=/, (route) => {
+  await page.route('**/*', (route) => {
+    if (route.request().method() !== 'POST') return route.continue();
     deleteRequested = true;
     return route.abort();
   });
@@ -23,10 +24,11 @@ test('cancelling the delete dialog keeps the note', async ({ page }) => {
     message = dialog.message();
     await dialog.dismiss();
   });
-  await note.getByRole('link', { name: 'smazat' }).click();
+  await note.getByRole('button', { name: 'smazat' }).click();
 
   expect(message).toBe('Opravdu smazat poznámku?');
   expect(deleteRequested).toBe(false);
   expect(page.url()).toBe(url);
   await expect(note).toBeVisible();
+  expect(deleteRequested).toBe(false);
 });

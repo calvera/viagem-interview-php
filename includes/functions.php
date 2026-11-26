@@ -34,6 +34,44 @@ function post_param($name, $default = null)
   return $default;
 }
 
+/**
+ * True when any of the POST fields was sent as an array (a forged request, the forms send strings).
+ */
+function post_has_array($names)
+{
+  foreach ($names as $name)
+  {
+    if (isset($_POST[$name]) && is_array($_POST[$name])) return true;
+  }
+  return false;
+}
+
+/**
+ * CSRF token of the session, created on first use.
+ */
+function csrf_token()
+{
+  if (empty($_SESSION['csrf_token'])) $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+  return $_SESSION['csrf_token'];
+}
+
+/**
+ * Hidden form field with the CSRF token.
+ */
+function csrf_field()
+{
+  return '<input type="hidden" name="csrf_token" value="' . csrf_token() . '">';
+}
+
+/**
+ * True when the POSTed CSRF token matches the session token.
+ */
+function csrf_check()
+{
+  if (empty($_SESSION['csrf_token'])) return false;
+  return hash_equals($_SESSION['csrf_token'], (string)post_param('csrf_token'));
+}
+
 function redirect($url)
 {
   header('Location: ' . $url);
@@ -215,8 +253,8 @@ function log_access($page)
   $user = isset($_SESSION['user']) ? $_SESSION['user'] : '';
   $ip = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '127.0.0.1';
 
-  $db->query("insert into access_log (page, ip, user_name, created_at)
-    values ('" . db_escape(substr($page, 0, 255)) . "', '" . db_escape($ip) . "', '" . db_escape($user) . "', now())");
+  $db->bindParams(array('page' => substr($page, 0, 255), 'ip' => $ip, 'user_name' => $user));
+  $db->query("insert into access_log (page, ip, user_name, created_at) values (:page, :ip, :user_name, now())");
 }
 
 function flash_set($msg, $type = 'ok')

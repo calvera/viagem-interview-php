@@ -14,7 +14,7 @@ if (strlen($q) < 2)
 
 $res = $db->query("select id, code, name, district
   from municipalities
-  where name like '" . $q . "%'
+  where name like :" . $db->bindParam('q', $q . '%') . "
   order by name
   limit 15");
 

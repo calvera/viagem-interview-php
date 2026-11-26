@@ -22,8 +22,9 @@ Rozhodnutí určují hlavně dvě omezení ze zadání:
 5. **Testy (v2.7.4).** Záchranná síť ještě před první změnou kódu: unit, smoke a Playwright, zelené na PHP 7.4. Chyby, které testy odhalily, jsou zapsané v TODO.
 6. **Migrace na PHP 8.5 (v2.7.5).** Kód upravený tak, aby běžel na 7.4 i 8.5 se stejným chováním. Testy zelené na obou verzích, popis nasazení v [MIGRATION.md](MIGRATION.md). Nálezy z review, které se netýkají kompatibility, jen zapsané do TODO.
 7. **Oprava logických chyb.** Chyby z revize a z testů (*Chyby v logice* v TODO), každá nejdřív prokázaná testem nebo reprodukcí: `trim_text`, `format_datetime('0000-00-00')`, apostrofy v `getWhere`, dělení nulou při `share_den = 0` (na PHP 8 pád), pole v parametrech GET/POST (text „Array“, na PHP 8 pád), `duedate` ve formuláři po chybě validace, limit exportu. Opravy až po migraci, aby migrace chování neměnila; malé změny, stejné chování na 7.4 i 8.5.
-8. **Zrychlení výpisu vlastníků.** Čeká.
-9. **Jak naložit s celým CRM.** Čeká.
+8. **Oprava bezpečnostních chyb.** Položky z *Bezpečnost* v TODO, každá nejdřív prokázaná neškodnou reprodukcí (hledání, které vrátí všechny řádky, chyba SQL v logu, dočasná poznámka s HTML) nebo testem. Hodnoty filtrů, hledání a našeptávače jdou do SQL jako parametry; poznámka se maže formulářem POST jen u svého vlastníka; všechny formuláře mají CSRF token ze session; pole ve formuláři úpravy je chyba validace; výstupy z uživatelských dat se escapují. Malé změny bez nové vrstvy (tři krátké funkce pro CSRF), stejné výsledky pro běžné hodnoty, stejně na 7.4 i 8.5. Přihlášení zůstává otevřené: kdo a jak se přihlašuje, je rozhodnutí o produktu.
+9. **Zrychlení výpisu vlastníků.** Čeká.
+10. **Jak naložit s celým CRM.** Čeká.
 
 Každá dokončená položka má vlastní commit, verzi v `composer.json` a git tag. Změny po verzích jsou v [CHANGELOG.md](CHANGELOG.md).
 
@@ -32,12 +33,13 @@ Každá dokončená položka má vlastní commit, verzi v `composer.json` a git 
 | | Stav |
 | --- | --- |
 | Aplikace na PHP 7.4 i 8.5 | hotovo (v2.7.5), připraveno k nasazení; před přepnutím serveru na 8.5 ověřit nastavení PHP na serveru |
-| Testy | 80 unit, 27 smoke, 18 Playwright; zelené na PHP 7.4 i 8.5 |
+| Testy | 96 unit, 37 smoke, 19 Playwright; zelené na PHP 7.4 i 8.5 |
 | Statická analýza | PHPStan level 2, bez chyb pro 7.4 i 8.5 |
 | Lokální prostředí | Docker: PHP 7.4 (`:8074`), PHP 8.5 (`:8085`), MariaDB se syntetickými daty |
 | Postup nasazení | [MIGRATION.md](MIGRATION.md): nastavení serveru, pořadí, návrat zpět, ověření |
 | Chyby v logice | opravené (TODO, *Chyby v logice*), včetně pádů na PHP 8 při `share_den = 0` a poli v parametrech |
-| Známé problémy | [TODO.md](TODO.md): bezpečnost, výkon, okrajové případy na PHP 8 (`NULL` z databáze) |
+| Bezpečnost | opravené SQL injection, CSRF, mazání poznámky (POST, jen u vlastníka), XSS; otevřené jen přihlášení (rozhodnutí o produktu) |
+| Známé problémy | [TODO.md](TODO.md): přihlášení, menší nálezy z bezpečnostního review (vzorce v CSV exportu, chybějící pole ve formuláři, nepoužívaný kód), výkon, okrajové případy na PHP 8 (`NULL` z databáze) |
 | Zrychlení výpisu vlastníků | čeká |
 | Popis, jak naložit s celým CRM | čeká |
 
@@ -49,7 +51,7 @@ Bez testů nejde ověřit, že migrace nic nerozbila. Testy proto vznikly jako p
 - **Smoke (PHPUnit přes HTTP):** všechny stránky vrátí 200, správný obsah a žádnou fatální chybu.
 - **Playwright:** totéž v prohlížeči a navíc JavaScript (našeptávač, potvrzení mazání, stažení CSV). Jeden běh otestuje obě verze PHP.
 
-Testy jen čtou, data nemění. Test mazání poznámky sám blokuje požadavek na smazání, takže nic nesmaže, ani když selže JavaScript aplikace.
+Testy jen čtou, data nemění. Test mazání poznámky sám blokuje každý POST, takže nic nesmaže, ani když selže JavaScript aplikace.
 
 Testy při psaní odhalily tři chyby (`trim_text`, `format_datetime`, apostrofy v `getWhere`). Během migrace se neopravovaly, aby neměnila chování; opravené jsou až v kroku *Oprava logických chyb* a testy teď ověřují správné chování.
 

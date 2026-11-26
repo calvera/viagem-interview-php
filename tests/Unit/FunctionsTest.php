@@ -170,6 +170,62 @@ class FunctionsTest extends TestCase
     $this->assertSame('Novák', post_param('last_name'));
   }
 
+  public function testPostHasArray()
+  {
+    $_POST = array('title' => 'Ing.', 'note' => array('x'));
+
+    $this->assertTrue(post_has_array(array('title', 'note')));
+    $this->assertFalse(post_has_array(array('title', 'missing')));
+  }
+
+  public function testCsrfTokenIsStableInSession()
+  {
+    $_SESSION = array();
+    $token = csrf_token();
+
+    $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $token);
+    $this->assertSame($token, csrf_token());
+    $this->assertSame('<input type="hidden" name="csrf_token" value="' . $token . '">', csrf_field());
+  }
+
+  public function testCsrfCheckAcceptsSessionToken()
+  {
+    $_SESSION = array();
+    $_POST = array('csrf_token' => csrf_token());
+
+    $this->assertTrue(csrf_check());
+  }
+
+  /**
+   * @dataProvider csrfInvalidProvider
+   */
+  public function testCsrfCheckRejectsInvalidToken($post)
+  {
+    $_SESSION = array();
+    csrf_token();
+    $_POST = $post;
+
+    $this->assertFalse(csrf_check());
+  }
+
+  public function csrfInvalidProvider()
+  {
+    return array(
+      'missing' => array(array()),
+      'empty' => array(array('csrf_token' => '')),
+      'wrong' => array(array('csrf_token' => str_repeat('0', 64))),
+      'array' => array(array('csrf_token' => array('x'))),
+    );
+  }
+
+  public function testCsrfCheckFailsWithoutSessionToken()
+  {
+    $_SESSION = array();
+    $_POST = array('csrf_token' => '');
+
+    $this->assertFalse(csrf_check());
+  }
+
   /**
    * @dataProvider ownerTypeLabelProvider
    */

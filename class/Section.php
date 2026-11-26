@@ -128,7 +128,7 @@ class Section
     foreach ($this->filters as $f)
     {
       if ($f['value'] === '' || !$f['sql']) continue;
-      $where[] = str_replace('{value}', $f['value'], $f['sql']);
+      $where[] = str_replace('{value}', ':' . $this->db->bindParam('f_' . $f['id'], $f['value']), $f['sql']);
     }
 
     if ($this->search_value != '' && count($this->search_items))
@@ -136,7 +136,7 @@ class Section
       $parts = array();
       foreach ($this->search_items as $item)
       {
-        $parts[] = $item . " like '%" . $this->search_value . "%'";
+        $parts[] = $item . ' like :' . $this->db->bindParam('search', '%' . $this->search_value . '%');
       }
       $where[] = '(' . implode(' or ', $parts) . ')';
     }
@@ -253,14 +253,14 @@ class Section
       else
       {
         $attr = $f['type'] == 'autocomplete' ? ' data-autocomplete="' . $f['id'] . '" autocomplete="off"' : '';
-        $html .= '<input type="text" name="f_' . $f['id'] . '" value="' . $f['value'] . '"' . $attr . '>';
+        $html .= '<input type="text" name="f_' . $f['id'] . '" value="' . h($f['value']) . '"' . $attr . '>';
       }
       $html .= '</label> ';
     }
 
     if (count($this->search_items))
     {
-      $html .= '<label>Hledat <input type="text" name="search" value="' . $this->search_value . '" placeholder="jméno, příjmení nebo IČO"></label> ';
+      $html .= '<label>Hledat <input type="text" name="search" value="' . h($this->search_value) . '" placeholder="jméno, příjmení nebo IČO"></label> ';
     }
 
     $html .= '<button type="submit">Filtrovat</button> ';
@@ -287,7 +287,7 @@ class Section
   function showInfo()
   {
     $html = '<div class="section_info">Nalezeno <b>' . number_format($this->total, 0, ',', ' ') . '</b> ' . $this->item_name;
-    if ($this->search_value != '') $html .= ' pro hledaný výraz „<b>' . $this->search_value . '</b>“';
+    if ($this->search_value != '') $html .= ' pro hledaný výraz „<b>' . h($this->search_value) . '</b>“';
     if ($this->pages > 1) $html .= ', strana ' . $this->page . ' z ' . number_format($this->pages, 0, ',', ' ');
     $html .= '</div>';
 

@@ -47,7 +47,7 @@ $runs = $db->queryResult("select * from report_runs order by run_date desc limit
     <tr>
       <td><?php echo format_datetime($n['created_at']) ?></td>
       <td><a href="index.php?url=owners/detail&amp;id=<?php echo $n['owner_id'] ?>"><?php echo h(owner_name($n)) ?></a></td>
-      <td><?php echo trim_text($n['note'], 120) ?></td>
+      <td><?php echo h(trim_text($n['note'], 120)) ?></td>
       <td><?php echo h($n['created_by']) ?></td>
     </tr>
 <?php } ?>

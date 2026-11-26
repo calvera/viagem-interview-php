@@ -221,10 +221,14 @@ class Database
         $val_id = trim($valarr[0]);
         $val_val = trim($valarr[1]);
 
-        if (substr($val_val, 0, 1) == "'") $val_val = preg_replace("/^'|'$/", '', $val_val);
+        // Already bound (e.g. a Section filter): keep the placeholder as it is.
+        if (!preg_match('/^:\w+$/', $val_val))
+        {
+          if (substr($val_val, 0, 1) == "'") $val_val = preg_replace("/^'|'$/", '', $val_val);
 
-        $bind = $this->bindParam(str_replace('.', '_', $val_id), $val_val);
-        $val = $val_id . ' ' . $val_operator . ' :' . $bind;
+          $bind = $this->bindParam(str_replace('.', '_', $val_id), $val_val);
+          $val = $val_id . ' ' . $val_operator . ' :' . $bind;
+        }
       }
 
       if ($i != 1) $exit .= ' ' . $operator;

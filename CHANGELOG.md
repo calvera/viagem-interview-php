@@ -4,6 +4,31 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.7] – 2026-11-26
+
+### Bezpečnost
+
+- SQL injection: hodnoty filtrů a hledání ve výpisech (`Section`) a parametr `q` našeptávače obcí se do SQL předávají jako parametry, ne jako text. Definice filtrů v modulech používají `{value}` bez apostrofů (`'o.type = {value}'`, `"m.name like concat('%', {value}, '%')"`); `Database::getWhere()` nechá už navázaný parametr beze změny.
+- CSRF: formuláře přidání a smazání poznámky a úpravy vlastníka posílají token ze session (`csrf_token()`, `csrf_field()`, `csrf_check()`). Bez platného tokenu se nic nezmění, stránka se načte znovu s chybou a s hodnotami z databáze (úprava vlastníka nepřevezme odeslané hodnoty, takže je jedno kliknutí na „Uložit“ neuloží).
+- Záznam do `access_log` (`log_access()`) předává adresu, IP a uživatele jako parametry místo `addslashes`.
+- Smazání poznámky maže jen poznámku zobrazeného vlastníka (`id` i `owner_id` jako parametry).
+- XSS: hodnoty filtrů a hledaný výraz ve výpisech, text poznámek v detailu vlastníka a na přehledu, kód katastrálního území v detailu vlastníka se escapují; našeptávač vkládá popisky jako text (`textContent`).
+
+### Opraveno
+
+- Smazání poznámky hlásí „Poznámka byla smazána.“ jen tehdy, když se poznámka opravdu smazala, jinak chybu (dříve např. `delete_note[]=x`).
+- Úprava vlastníka: pole odeslané jako seznam (`duedate[]=x`, `note[]=x`…) je chyba validace, dříve se uložil prázdný termín nebo poznámka.
+
+### Změněno
+
+- Poznámka se maže formulářem (POST) s tlačítkem „smazat“ místo odkazu `?delete_note=`; potvrzovací dialog zůstává. Odkaz `?delete_note=` už nic nemaže.
+- Test Playwright mazání poznámky klikne na tlačítko ve formuláři a blokuje každý POST, ne jen odkaz `delete_note=`.
+
+### Přidáno
+
+- TODO: nové otevřené položky – chybějící pole v POST úpravy vlastníka se uloží prázdná, CSV formula injection v exportu, nepoužívané `Database::delete()` / `prepareData()` / `escape()`, obří `page` dá chybu SQL.
+- Unit testy: CSRF funkce, `post_has_array()`, parametry filtrů a hledání v `Section` (hodnota s apostrofem je parametr, ne SQL), escapování filtrů a hledání, `getWhere()` s navázaným parametrem. Smoke testy (jen GET): hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Playwright: našeptávač nevloží HTML z popisku.
+
 ## [2.7.6] – 2026-11-26
 
 ### Opraveno

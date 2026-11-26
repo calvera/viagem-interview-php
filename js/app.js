@@ -77,7 +77,7 @@
       }
       for (var j = 0; j < data.length; j++) {
         var li = document.createElement('li');
-        li.innerHTML = data[j].label;
+        li.textContent = data[j].label;
         li.setAttribute('data-value', data[j].value);
         li.addEventListener('mousedown', function () {
           input.value = this.getAttribute('data-value');

@@ -133,6 +133,85 @@ class PagesTest extends TestCase
   }
 
   /**
+   * @dataProvider injectionProvider
+   */
+  public function testInjectionInFilterOrSearchFindsNothing($path)
+  {
+    $response = $this->get($path);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>0</b>', $response['body']);
+  }
+
+  public function injectionProvider()
+  {
+    // Before the fix each of these matched every row ("or 'a' like 'a" / "or 1=1").
+    $always_true = rawurlencode("zzzqq%' or 'a' like 'a");
+
+    return array(
+      'municipalities search' => array('/index.php?url=municipalities&search=' . $always_true),
+      'municipalities district' => array('/index.php?url=municipalities&f_district=' . rawurlencode("x' or 1=1 or district <> 'y")),
+      'parcels municipality' => array('/index.php?url=parcels&f_municipality=' . $always_true),
+      'parcels apostrophe' => array('/index.php?url=parcels&search=x%27'),
+      'owners type' => array('/index.php?url=owners&f_type=' . rawurlencode("x' or '1'='1")),
+    );
+  }
+
+  public function testSearchIsEscapedInHtml()
+  {
+    $response = $this->get('/index.php?url=municipalities&search=%3Cscript%3Ex%3C%2Fscript%3E');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertStringNotContainsString('<script>x</script>', $response['body']);
+    $this->assertStringContainsString('name="search" value="&lt;script&gt;x&lt;/script&gt;"', $response['body']);
+    $this->assertStringContainsString('„<b>&lt;script&gt;x&lt;/script&gt;</b>“', $response['body']);
+  }
+
+  public function testFilterIsEscapedInHtml()
+  {
+    $response = $this->get('/index.php?url=parcels&f_municipality=%22%3E%3Cscript%3Ex%3C%2Fscript%3E');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertStringNotContainsString('<script>x</script>', $response['body']);
+    $this->assertStringContainsString('name="f_municipality" value="&quot;&gt;&lt;script&gt;x&lt;/script&gt;"', $response['body']);
+  }
+
+  /**
+   * @dataProvider autocompleteInjectionProvider
+   */
+  public function testAutocompleteInjectionReturnsEmptyJson($q)
+  {
+    $response = $this->get('/ajax_municipalities.php?q=' . rawurlencode($q));
+
+    $this->assertSame(200, $response['status']);
+    $this->assertSame('[]', $response['body']);
+  }
+
+  public function autocompleteInjectionProvider()
+  {
+    return array(
+      'apostrophe' => array("Lh'"),
+      'always true' => array("zz%' or 'a' like 'a"),
+    );
+  }
+
+  /**
+   * Notes are deleted only by POST; a GET with delete_note is ignored.
+   * A nonexistent note id, so nothing is deleted even if this check fails.
+   */
+  public function testGetDeleteNoteDeletesNothing()
+  {
+    $response = $this->get('/index.php?url=owners/detail&id=420001&delete_note=999999999');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('name="note_id" value="60000"', $response['body']);
+    $this->assertStringContainsString('name="csrf_token" value="', $response['body']);
+    $this->assertStringNotContainsString('delete_note=', $response['body']);
+  }
+
+  /**
    * GET the path and return status, content type and body.
    */
   private function get($path)

@@ -12,6 +12,12 @@ if (!$owner)
 
 $errors = array();
 
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && !csrf_check())
+{
+  flash_set('Platnost formuláře vypršela, odešlete ho prosím znovu.', 'error');
+  redirect('index.php?url=owners/edit&id=' . $id);
+}
+
 if ($_SERVER['REQUEST_METHOD'] == 'POST')
 {
   $in = array();
@@ -28,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
   $in['do_not_contact'] = post_param('do_not_contact') ? '1' : '0';
   $in['note'] = post_param('note');
 
+  if (post_has_array(array_keys($in))) $errors[] = 'Formulář obsahuje neplatné hodnoty.';
   if ($in['last_name'] == '') $errors[] = $owner['type'] == 'P' ? 'Vyplňte název firmy.' : 'Vyplňte příjmení.';
   if ($in['email'] != '' && !filter_var($in['email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'E-mail nemá platný formát.';
   if ($in['zip'] != '' && !preg_match('/^\d{5}$/', $in['zip'])) $errors[] = 'PSČ musí mít 5 číslic.';
@@ -57,11 +64,14 @@ $page_title = 'Úprava – ' . owner_name($owner);
 
 <h1>Úprava vlastníka</h1>
 
+<?php echo flash_show() ?>
+
 <?php foreach ($errors as $e) { ?>
   <div class="flash flash_error"><?php echo h($e) ?></div>
 <?php } ?>
 
 <form method="post" action="index.php?url=owners/edit&amp;id=<?php echo $id ?>" class="edit_form">
+  <?php echo csrf_field() ?>
   <table class="detail">
 <?php if ($owner['type'] == 'P') { ?>
     <tr><th>Název firmy</th><td><input type="text" name="last_name" value="<?php echo h($owner['last_name']) ?>" size="50"></td></tr>

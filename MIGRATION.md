@@ -63,7 +63,9 @@ Nic se nemění. Připojení (`utf8mb4`, `sql_mode = ''`, emulované prepared st
 
 ### Práva k zápisu
 
-Uživatel, pod kterým běží nové PHP (web i cron), musí mít zápis do `logs/`, `reports/` a do adresáře session (`session.save_path`). **ověřit**, pokud se uživatel nebo pool mění (např. jiný PHP-FPM pool pro 8.5).
+Uživatel, pod kterým běží nové PHP (web i cron), musí mít zápis do `logs/`, `reports/` a do adresáře session (`session.save_path`). **ověřit**, pokud se uživatel nebo pool mění (např. jiný PHP-FPM pool pro 8.5). Na session od opravy bezpečnostních chyb stojí i CSRF token formulářů: když se session neuloží, každé uložení poznámky nebo vlastníka skončí chybou „Platnost formuláře vypršela“.
+
+- **ověřit:** `session.gc_maxlifetime` (výchozí hodnota PHP 1440 s, tj. 24 minut; na Debianu/Ubuntu staré session maže cron podle této hodnoty). Po vypršení session skončí přidání poznámky nebo uložení vlastníka chybou „Platnost formuláře vypršela“ a napsaný text se ztratí. Hodnotu zkontrolovat a podle toho, jak dlouho mají uživatelé formuláře otevřené, zvýšit (např. na pracovní den).
 
 ### Locale
 
@@ -84,7 +86,8 @@ Noční report musí spouštět CLI nového PHP:
 ## 3. Postup nasazení
 
 1. Nahrát nový kód na server s PHP 7.4 (běžné nasazení změněných souborů).
-2. Ověřit na 7.4 (kapitola 4). Kód je pro 7.4 beze změny chování kromě oprav chyb v logice (CHANGELOG), které platí stejně na obou verzích.
+   - Od opravy bezpečnostních chyb se mění zápis filtrů výpisů: místo `'{value}'` (v apostrofech) se píše `{value}` a hodnota se předává jako parametr. `class/Section.php`, `class/Database.php`, `includes/functions.php` a definice výpisů (`admin_owners/owners_functions.php`, `admin_parcels_main.php`, `admin_municipalities/municipalities_section.php`) proto nahrát najednou. Modul mimo tento repozitář, který má ve filtru dál `'{value}'`, selže bezpečně (chyba SQL nebo nic nenajde), nic neprozradí. **ověřit** v celém CRM, že žádný jiný modul nemá `{value}` v apostrofech, ani v podobě `'%{value}%'` u LIKE: projít všechny výskyty `grep -rn "{value}"` a případně je upravit ve stejném nasazení.
+2. Ověřit na 7.4 (kapitola 4). Kód je pro 7.4 beze změny chování kromě oprav chyb v logice a bezpečnosti (CHANGELOG), které platí stejně na obou verzích.
 3. Připravit PHP 8.5 vedle 7.4 (rozšíření, `php.ini`), přepnout web (Apache / PHP-FPM) i cron na 8.5.
 4. Ověřit na 8.5 (kapitola 4).
 5. Návrat: přepnout web i cron zpět na PHP 7.4. Kód zůstává.

@@ -2,10 +2,20 @@
 
 $id = (int)get_param('id');
 
-if (isset($_GET['delete_note']))
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && !csrf_check())
 {
-  $db->query("delete from owner_notes where id = " . $_GET['delete_note']);
-  flash_set('Poznámka byla smazána.');
+  flash_set('Platnost formuláře vypršela, zkuste to prosím znovu.', 'error');
+  redirect('index.php?url=owners/detail&id=' . $id . '#notes');
+}
+
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && post_param('action') == 'delete_note')
+{
+  $db->bindParams(array('note_id' => (int)post_param('note_id'), 'owner_id' => $id));
+  $res = $db->query("delete from owner_notes where id = :note_id and owner_id = :owner_id");
+
+  if ($res && $db->getAffectedRows()) flash_set('Poznámka byla smazána.');
+  else flash_set('Poznámku se nepodařilo smazat.', 'error');
+
   redirect('index.php?url=owners/detail&id=' . $id . '#notes');
 }
 
@@ -126,7 +136,7 @@ if (count($parcels))
 <?php $p_share_area = share_area($p['area_m2'], $p['share_num'], $p['share_den']) ?>
       <tr>
         <td><?php echo h($p['municipality_name']) ?></td>
-        <td><?php echo h($p['cadastral_area']) ?> <small>(<?php echo $p['cadastral_code'] ?>)</small></td>
+        <td><?php echo h($p['cadastral_area']) ?> <small>(<?php echo h($p['cadastral_code']) ?>)</small></td>
         <td><?php echo h($p['parcel_number']) ?></td>
         <td><?php echo $p['lv_number'] ?></td>
         <td><?php echo h(mb_ucFirst($p['land_type'])) ?></td>
@@ -142,6 +152,7 @@ if (count($parcels))
 <h2 id="notes">Poznámky (<?php echo count($notes) ?>)</h2>
 
 <form method="post" action="index.php?url=owners/detail&amp;id=<?php echo $id ?>" class="note_form">
+  <?php echo csrf_field() ?>
   <input type="hidden" name="action" value="add_note">
   <textarea name="note" rows="3" placeholder="Nová poznámka…"></textarea>
   <button type="submit">Přidat poznámku</button>
@@ -155,8 +166,13 @@ if (count($parcels))
   <div class="note">
     <div class="note_head">
       <b><?php echo h($n['created_by']) ?></b>, <?php echo format_datetime($n['created_at']) ?>
-      <a href="index.php?url=owners/detail&amp;id=<?php echo $id ?>&amp;delete_note=<?php echo $n['id'] ?>" class="delete" data-confirm="Opravdu smazat poznámku?">smazat</a>
+      <form method="post" action="index.php?url=owners/detail&amp;id=<?php echo $id ?>" class="note_delete">
+        <?php echo csrf_field() ?>
+        <input type="hidden" name="action" value="delete_note">
+        <input type="hidden" name="note_id" value="<?php echo $n['id'] ?>">
+        <button type="submit" class="delete" data-confirm="Opravdu smazat poznámku?">smazat</button>
+      </form>
     </div>
-    <div class="note_text"><?php echo nl2br($n['note']) ?></div>
+    <div class="note_text"><?php echo nl2br(h($n['note'])) ?></div>
   </div>
 <?php } ?>

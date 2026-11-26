@@ -277,9 +277,16 @@ table.detail td {
   font-size: 12px;
 }
 
-.note_head a.delete {
+.note_head form.note_delete {
   float: right;
+}
+
+.note_head button.delete {
+  padding: 0;
+  border: 0;
+  background: none;
   color: #c0392b;
+  text-decoration: underline;
 }
 
 .cards {

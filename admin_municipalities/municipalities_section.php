@@ -36,8 +36,8 @@ $section->addCol('Kraj', 18, 'region');
 $section->addCol('Parcel', 8, 'parcels', 'int', false);
 $section->addCol('', 8, 'owners_link', 'html', false);
 
-$section->addFilter('district', 'Okres', 'select', "district = '{value}'", $districts);
-$section->addFilter('region', 'Kraj', 'select', "region = '{value}'", $regions);
+$section->addFilter('district', 'Okres', 'select', 'district = {value}', $districts);
+$section->addFilter('region', 'Kraj', 'select', 'region = {value}', $regions);
 $section->setSearch(array('name', 'code'), get_param('search'));
 
 $section->setSortBy('name', 'asc');

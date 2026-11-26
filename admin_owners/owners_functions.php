@@ -12,9 +12,9 @@ function owners_build_section(?Section $section = null, $for_export = false)
 
   $section->addSelect('o.*');
 
-  $section->addFilter('municipality', 'Obec', 'autocomplete', "m.name like '%{value}%'");
-  $section->addFilter('type', 'Typ', 'select', "o.type = '{value}'", array('F' => 'Fyzická osoba', 'P' => 'Právnická osoba'));
-  $section->addFilter('dnc', 'Neoslovovat', 'select', "o.do_not_contact = '{value}'", array('1' => 'ano', '0' => 'ne'));
+  $section->addFilter('municipality', 'Obec', 'autocomplete', "m.name like concat('%', {value}, '%')");
+  $section->addFilter('type', 'Typ', 'select', 'o.type = {value}', array('F' => 'Fyzická osoba', 'P' => 'Právnická osoba'));
+  $section->addFilter('dnc', 'Neoslovovat', 'select', 'o.do_not_contact = {value}', array('1' => 'ano', '0' => 'ne'));
 
   if ($section->hasFilter('municipality') || $for_export)
   {
