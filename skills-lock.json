@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "skills": {
+    "analyse-with-phpstan": {
+      "source": "phpstan/phpstan",
+      "commit": "302cd8072631455affc9dc5da4255e0a89052b23",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/analyse-with-phpstan/SKILL.md",
+      "computedHash": "40e83bcfd8e05773c8868bff886d43b64f62943b46bd7cb6aaadfe8897a9e8b6"
+    },
+    "php-best-practices": {
+      "source": "AsyrafHussin/agent-skills",
+      "commit": "1aa0ff717c10309226c9e678f00873976450fd76",
+      "sourceType": "github",
+      "skillPath": "skills/php-best-practices/SKILL.md",
+      "computedHash": "40b922a65a7b29c0561517c2aa505dd80950b259dec415b37dd5486f1e46771c"
+    }
+  }
+}
