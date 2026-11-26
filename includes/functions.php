@@ -266,6 +266,30 @@ function owners_parcels($owner_ids)
 }
 
 /**
+ * Count and share area of the owners' parcels in the municipality by id, by owner id, in one query;
+ * owners without a parcel there are left out. A share with denominator 0 adds no area, as share_area().
+ * 1e0 makes the division double, as in PHP: integer division is decimal rounded to 4 places per term
+ * (9 999 m² × 1/20000 would be 0.5000 and show 1 m², PHP gives 0.49995 and 0 m²).
+ */
+function owners_parcels_in_municipality($owner_ids, $municipality_id)
+{
+  global $db;
+
+  $list = array();
+  $bind = $db->bindParam('municipality_id', (int)$municipality_id);
+  $res = $db->query("select os.owner_id, count(*) as cnt, sum(1e0 * p.area_m2 * os.share_num / nullif(os.share_den, 0)) as area
+    from ownerships os
+    join parcels p on p.id = os.parcel_id
+    where os.owner_id in (" . sql_int_list($owner_ids) . ") and p.municipality_id = :" . $bind . "
+    group by os.owner_id");
+  if (!$res) return $list;
+
+  while ($r = $res->fetch_assoc()) $list[$r['owner_id']] = array('cnt' => (int)$r['cnt'], 'area' => $r['area']);
+
+  return $list;
+}
+
+/**
  * Owners of the parcels with share and LV number, grouped by parcel id, in one query.
  * Each parcel's owners are ordered by last name, as in the parcels list before.
  */

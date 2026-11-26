@@ -4,6 +4,17 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.11] – 2026-11-26
+
+### Změněno
+
+- Odkaz „vlastníci“ ve výpisu obcí filtruje podle id obce (`f_municipality_id=<id>`), ne podle podřetězce názvu: „Lhota“ ukáže 240 vlastníků s obcí Lhota místo 20 000 (dříve i Horní, Dolní… Lhota). Jde o obec vlastníka jako dosud (`o.municipality_id`). Zda má odkaz místo toho ukazovat vlastníky parcel v obci, zůstává otevřené (`OPENQUESTIONS.md`, otázka 1). Ve formuláři filtrů je před prvním polem popisek „Obec: <b>název</b> ×“; × filtr zruší a vrátí výpis na 1. stranu, ostatní filtry a hledání ho zachovají. Sloupec „V obci“ s tímto filtrem počítá parcely a výměru podílů v SQL podle `p.municipality_id` (`owners_parcels_in_municipality()` v `includes/functions.php`). Export CSV s `f_municipality_id` obsahuje vlastníky obce. Textové pole „Obec“ dál hledá podřetězec a staré odkazy s `f_municipality=<název>` fungují jako dřív.
+
+### Přidáno
+
+- `Section::addHiddenFilter()`: filtr bez pole ve formuláři, nastavený odkazem. Bere jen číslice, hodnota je parametr SQL, popisek se načte jedním dotazem s parametrem a escapuje, hodnota zůstane ve formuláři jako skryté pole.
+- Unit testy skrytého filtru (jen číslice, parametr, escapování popisku, odkaz ×, skryté pole, beze změny formuláře bez hodnoty); smoke testy odkazu z výpisu obcí, počtu vlastníků podle id, popisku, hodnot „V obci“, ignorování neplatného id a exportu; Playwright test odkazu z obcí na vlastníky (adresa, popisek, prázdné textové pole, „V obci“, zachování při dalším filtru, ×).
+
 ## [2.7.10] – 2026-11-26
 
 ### Změněno

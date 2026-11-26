@@ -103,6 +103,27 @@ class Section
     $this->filters[$id] = $filter;
   }
 
+  /**
+   * Filter without a form field, set by a link (e.g. f_municipality_id=12). Only digits are accepted,
+   * anything else is ignored. The value is bound into $sql as {value}; $label_sql (also with {value})
+   * loads the text shown as "title: label ×", where × removes this parameter (and the page, as the sort links).
+   */
+  function addHiddenFilter($id, $title, $sql, $label_sql)
+  {
+    $value = (string)get_param('f_' . $id);
+
+    $filter = array();
+    $filter['id'] = $id;
+    $filter['title'] = $title;
+    $filter['type'] = 'hidden';
+    $filter['sql'] = $sql;
+    $filter['label_sql'] = $label_sql;
+    $filter['options'] = array();
+    $filter['value'] = preg_match('/^\d+\z/', $value) ? $value : '';
+
+    $this->filters[$id] = $filter;
+  }
+
   function getFilterValue($id)
   {
     if (!isset($this->filters[$id])) return '';
@@ -258,6 +279,12 @@ class Section
 
     foreach ($this->filters as $f)
     {
+      if ($f['type'] == 'hidden')
+      {
+        if ($f['value'] !== '') $html .= $this->showHiddenFilter($f);
+        continue;
+      }
+
       $html .= '<label>' . $f['title'] . ' ';
       if ($f['type'] == 'select')
       {
@@ -285,6 +312,23 @@ class Section
     }
 
     $html .= '</form>';
+
+    return $html;
+  }
+
+  /**
+   * Label of a hidden filter with a link that removes it, and the value as a hidden input,
+   * so the filter stays when the form (other filters, search) is submitted.
+   */
+  function showHiddenFilter($f)
+  {
+    $sql = str_replace('{value}', ':' . $this->db->bindParam('f_' . $f['id'], $f['value']), $f['label_sql']);
+    $label = $this->db->queryValue($sql);
+    if ($label === null) $label = $f['value'];
+
+    $html = '<span class="hidden_filter">' . $f['title'] . ': <b>' . h($label) . '</b> ';
+    $html .= '<a href="' . url(array('f_' . $f['id'] => null, 'page' => null), true) . '" title="zrušit">×</a></span> ';
+    $html .= '<input type="hidden" name="f_' . $f['id'] . '" value="' . h($f['value']) . '">';
 
     return $html;
   }

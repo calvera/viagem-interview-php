@@ -11,7 +11,7 @@ $section->addCol('Typ', 10, 'type_label', 'string', false);
 $section->addCol('Narození / IČO', 10, 'birth_ico', 'string', false);
 $section->addCol('Obec', 16, 'municipality_html', 'html', false);
 $section->addCol('Parcel', 6, 'parcel_count', 'int', false);
-if ($section->hasFilter('municipality'))
+if (owners_has_municipality_filter($section))
 {
   $section->addCol('V obci', 10, 'in_municipality', 'html', false);
 }

@@ -47,12 +47,12 @@ class PagesTest extends TestCase
       'owner edit missing' => array('/index.php?url=owners/edit&id=999999999', 'Vlastník nenalezen', 'Zpět na výpis vlastníků'),
       'parcels' => array('/index.php?url=parcels', 'Parcely', 'class="pagination"'),
       'parcels by land type' => array('/index.php?url=parcels&f_land_type=orn%C3%A1%20p%C5%AFda', 'Parcely', '<td class="col_string">Orná půda</td>'),
-      'municipalities' => array('/index.php?url=municipalities', 'Obce', 'f_municipality='),
+      'municipalities' => array('/index.php?url=municipalities', 'Obce', 'f_municipality_id='),
       'municipalities huge page shows last page' => array('/index.php?url=municipalities&page=99999999999999999999', 'Obce', ', strana 125 z 125'),
       'municipalities by region' => array('/index.php?url=municipalities&f_region=Z%C3%A1padn%C3%AD%20kraj', 'Obce', '<td class="col_string">Západní kraj</td>'),
       'array url is ignored' => array('/index.php?url%5B%5D=x', 'Přehled', 'Poslední poznámky'),
       'array search is ignored' => array('/index.php?url=owners&search%5B%5D=x', 'Vlastníci pozemků', 'class="pagination"'),
-      'array sort is ignored' => array('/index.php?url=municipalities&sort%5B%5D=x', 'Obce', 'f_municipality='),
+      'array sort is ignored' => array('/index.php?url=municipalities&sort%5B%5D=x', 'Obce', 'f_municipality_id='),
     );
   }
 
@@ -200,8 +200,11 @@ class PagesTest extends TestCase
   /**
    * Municipality, parcel count and "V obci" (parcels in municipalities whose name contains the filter, with share area)
    * for owners on a page that fits all matches, so the order does not matter. Values from v2.7.8.
+   * With the filter by id (link from the municipalities list), "V obci" counts the parcels in that municipality;
+   * values from the database (`ownerships` joined to `parcels where municipality_id = ?`).
    *
    * @dataProvider inMunicipalityProvider
+   * @dataProvider inMunicipalityByIdProvider
    */
   public function testInMunicipalityColumn($path, $owner_id, $municipality, $parcels, $in_municipality)
   {
@@ -226,6 +229,97 @@ class PagesTest extends TestCase
       'some parcels elsewhere' => array($lhota, 224928, 'Přední Lhota u Brodu', 4, '2 <small>(1,74 ha)</small>'),
       'no parcel in municipality' => array($kopec, 435982, 'Dolní Lhota na Kopci', 2, '<span class="muted">–</span>'),
     );
+  }
+
+  public function inMunicipalityByIdProvider()
+  {
+    $lhota = '/index.php?url=owners&f_municipality_id=1&search=';
+
+    return array(
+      'by id, m²' => array($lhota . 'Agro', 180000, 'Lhota', 2, '2 <small>(5 188 m²)</small>'),
+      'by id, ha' => array($lhota . 'Agro', 360000, 'Lhota', 2, '2 <small>(1,09 ha)</small>'),
+      'by id, area 12 650 m² rounds up' => array($lhota . 'Dvo%C5%99%C3%A1k', 102500, 'Lhota', 3, '3 <small>(1,27 ha)</small>'),
+      'by id, parcels only elsewhere' => array('/index.php?url=owners&f_municipality_id=2018&search=Kol%C3%A1%C5%99ov%C3%A1', 2097, 'Zadní Ves v Údolí', 3, '<span class="muted">–</span>'),
+    );
+  }
+
+  /**
+   * Link "vlastníci" in the municipalities list filters by municipality id (Lhota, code 500040, has id 1).
+   */
+  public function testMunicipalityOwnersLinkById()
+  {
+    $response = $this->get('/index.php?url=municipalities&search=500040');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertStringContainsString('<a href="index.php?url=owners&amp;f_municipality_id=1">vlastníci</a>', $response['body']);
+    $this->assertStringNotContainsString('f_municipality=', $response['body']);
+  }
+
+  /**
+   * Owners by municipality id: exactly the owners of that municipality (`select count(*) from owners where
+   * municipality_id = ?`; "Lhota" as a name substring finds 20 000), with the label, the remove link, the value
+   * as a hidden input and an empty text field.
+   *
+   * @dataProvider ownersByIdProvider
+   */
+  public function testOwnersByMunicipalityId($id, $name, $count)
+  {
+    $response = $this->get('/index.php?url=owners&f_municipality_id=' . $id);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>' . $count . '</b> vlastníků', $response['body']);
+    $this->assertStringContainsString('<span class="hidden_filter">Obec: <b>' . $name . '</b> <a href="index.php?url=owners" title="zrušit">×</a></span> '
+      . '<input type="hidden" name="f_municipality_id" value="' . $id . '">', $response['body']);
+    $this->assertStringContainsString('name="f_municipality" value=""', $response['body']);
+    $this->assertStringContainsString('<th style="width: 10%">V obci</th>', $response['body']);
+  }
+
+  public function ownersByIdProvider()
+  {
+    return array(
+      'Lhota' => array(1, 'Lhota', 240),
+      'Zadní Ves v Údolí' => array(2018, 'Zadní Ves v Údolí', 80),
+      'Velká Lhota na Rovni' => array(5256, 'Velká Lhota na Rovni', 80),
+    );
+  }
+
+  /**
+   * An id that is not just digits is ignored: the full list without the label and the "V obci" column.
+   *
+   * @dataProvider invalidIdProvider
+   */
+  public function testInvalidMunicipalityIdIsIgnored($value)
+  {
+    $response = $this->get('/index.php?url=owners&f_municipality_id=' . $value);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>500 000</b> vlastníků', $response['body']);
+    $this->assertStringNotContainsString('hidden_filter', $response['body']);
+    $this->assertStringNotContainsString('V obci', $response['body']);
+  }
+
+  public function invalidIdProvider()
+  {
+    return array(
+      'text' => array('abc'),
+      'injection' => array(rawurlencode('1 or 1=1')),
+      'negative' => array('-1'),
+      'array' => array('1&f_municipality_id%5B%5D=1'),
+    );
+  }
+
+  public function testExportByMunicipalityId()
+  {
+    $response = $this->get('/index.php?url=owners/export&f_municipality_id=1&all=1');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+
+    $lines = array_slice(explode("\n", trim($response['body'])), 2);
+    $this->assertCount(240, $lines);
+    foreach ($lines as $line) $this->assertSame('Lhota', str_getcsv($line, ';', '"', '')[10]);
   }
 
   /**

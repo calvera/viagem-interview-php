@@ -12,6 +12,7 @@ function owners_build_section(?Section $section = null, $for_export = false)
 
   $section->addSelect('o.*');
 
+  $section->addHiddenFilter('municipality_id', 'Obec', 'o.municipality_id = {value}', 'select name from municipalities where id = {value}');
   $section->addFilter('municipality', 'Obec', 'autocomplete', "m.name like concat('%', {value}, '%')");
   $section->addFilter('type', 'Typ', 'select', 'o.type = {value}', array('F' => 'Fyzická osoba', 'P' => 'Právnická osoba'));
   $section->addFilter('dnc', 'Neoslovovat', 'select', 'o.do_not_contact = {value}', array('1' => 'ano', '0' => 'ne'));
@@ -37,15 +38,26 @@ function owners_build_section(?Section $section = null, $for_export = false)
 }
 
 /**
+ * True when the list shows the "V obci" column: with the municipality filter by id or by name.
+ */
+function owners_has_municipality_filter($section)
+{
+  return $section->hasFilter('municipality_id') || $section->hasFilter('municipality');
+}
+
+/**
  * Loads the municipality name, parcel count and (with the municipality filter) the parcels
  * for all owners on the page in one query each, instead of per row.
+ * With the filter by id, "V obci" (count and share area) comes from SQL by p.municipality_id;
+ * with the filter by name only, the parcels are matched by name substring in owners_list_row().
  */
 function owners_list_prepare($rows, $section)
 {
   $owner_ids = array_column($rows, 'id');
   $names = municipality_names(array_column($rows, 'municipality_id'));
   $counts = owners_parcel_counts($owner_ids);
-  $parcels = $section->hasFilter('municipality') ? owners_parcels($owner_ids) : array();
+  $in = $section->hasFilter('municipality_id') ? owners_parcels_in_municipality($owner_ids, $section->getFilterValue('municipality_id')) : null;
+  $parcels = $in === null && $section->hasFilter('municipality') ? owners_parcels($owner_ids) : array();
 
   foreach ($rows as $i => $r)
   {
@@ -54,6 +66,7 @@ function owners_list_prepare($rows, $section)
     $rows[$i]['_municipality_name'] = isset($names[$municipality_id]) ? $names[$municipality_id] : null;
     $rows[$i]['parcel_count'] = isset($counts[$id]) ? $counts[$id] : '0';
     $rows[$i]['_parcels'] = isset($parcels[$id]) ? $parcels[$id] : array();
+    if ($in !== null) $rows[$i]['_in_municipality'] = isset($in[$id]) ? $in[$id] : array('cnt' => 0, 'area' => 0);
   }
 
   return $rows;
@@ -71,9 +84,9 @@ function owners_list_row($r, $section)
 
   $r['municipality_html'] = h($r['_municipality_name']);
 
-  if ($section->hasFilter('municipality'))
+  if (owners_has_municipality_filter($section))
   {
-    $in = parcels_in_municipality($r['_parcels'], $section->getFilterValue('municipality'));
+    $in = isset($r['_in_municipality']) ? $r['_in_municipality'] : parcels_in_municipality($r['_parcels'], $section->getFilterValue('municipality'));
     if ($in['cnt'] > 0) $r['in_municipality'] = $in['cnt'] . ' <small>(' . format_area($in['area']) . ')</small>';
     else $r['in_municipality'] = '<span class="muted">–</span>';
   }

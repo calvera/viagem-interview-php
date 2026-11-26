@@ -4,7 +4,7 @@ Nejasnosti, které musí rozhodnout zadavatel. Po rozhodnutí se u otázky dopln
 
 ## 1. Co znamená filtr „Obec“ a odkaz „vlastníci“ u obce?
 
-**Stav:** otevřená, blokuje položku *Filtr obce ve výpisu vlastníků* v `TODO.md` (sekce *Výkon*).
+**Stav:** částečně rozhodnutá. Rozhodnutí z 26. 11. 2026: odkaz „vlastníci“ u obce filtruje podle id obce, tedy přesně jednu obec, ne podle podřetězce názvu (`TODO.md`, *Výkon*, *Filtr obce ve výpisu vlastníků: odkaz přes id*). Otevřené zůstává, zda jde o obec vlastníka (a), nebo o vlastníky parcel v obci (b); do rozhodnutí odkaz používá variantu a) jako dosud (`o.municipality_id = id`). Textové pole „Obec“ s našeptávačem dál hledá podřetězec názvu („Lhota“ najde i Horní, Dolní… Lhota).
 
 Filtr „Obec“ ve výpisu vlastníků dnes vybírá vlastníky podle jejich obce (`o.municipality_id`, v detailu „Obec (KN)“). Výpis obcí ale vedle odkazu „vlastníci“ ukazuje počet parcel v obci a sloupec „V obci“ ve výpisu vlastníků počítá parcely. Výpis tak míchá dva významy.
 

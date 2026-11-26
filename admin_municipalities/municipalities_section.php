@@ -2,7 +2,7 @@
 
 function municipalities_row($r, $section)
 {
-  $r['owners_link'] = '<a href="index.php?url=owners&amp;f_municipality=' . urlencode($r['name']) . '">vlastníci</a>';
+  $r['owners_link'] = '<a href="index.php?url=owners&amp;f_municipality_id=' . (int)$r['id'] . '">vlastníci</a>';
 
   return $r;
 }

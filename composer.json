@@ -27,6 +27,6 @@
         "test": "phpunit --testsuite unit",
         "test:smoke": "phpunit --testsuite smoke"
     },
-    "version": "2.7.10",
+    "version": "2.7.11",
     "time": "2026-11-26"
 }
