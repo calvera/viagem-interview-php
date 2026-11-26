@@ -16,15 +16,21 @@ function h($s)
   return @htmlspecialchars($s === null ? '' : $s, ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * GET parameter, or $default when missing or an array (no parameter of the app is an array).
+ */
 function get_param($name, $default = null)
 {
-  if (isset($_GET[$name])) return $_GET[$name];
+  if (isset($_GET[$name]) && !is_array($_GET[$name])) return $_GET[$name];
   return $default;
 }
 
+/**
+ * POST parameter, or $default when missing or an array.
+ */
 function post_param($name, $default = null)
 {
-  if (isset($_POST[$name])) return $_POST[$name];
+  if (isset($_POST[$name]) && !is_array($_POST[$name])) return $_POST[$name];
   return $default;
 }
 
@@ -82,7 +88,7 @@ function format_date($date, $empty = '–')
 
 function format_datetime($date, $empty = '–')
 {
-  if (!$date || $date == '0000-00-00 00:00:00') return $empty;
+  if (!$date || $date == '0000-00-00' || $date == '0000-00-00 00:00:00') return $empty;
   return date('j. n. Y H:i', strtotime($date));
 }
 
@@ -98,9 +104,18 @@ function format_share($num, $den)
   return $num . '/' . $den;
 }
 
+/**
+ * Area of an ownership share, null for an invalid share with denominator 0.
+ */
+function share_area($area, $num, $den)
+{
+  if (!$den) return null;
+  return $area * $num / $den;
+}
+
 function trim_text($s, $length = 80)
 {
-  if (strlen($s) <= $length) return $s;
+  if (mb_strlen($s, 'UTF-8') <= $length) return $s;
   return mb_substr($s, 0, $length, 'UTF-8') . '…';
 }
 
@@ -156,7 +171,7 @@ function owner_parcels_in_municipality($owner_id, $municipality)
   {
     if (mb_stripos($p['municipality_name'], $municipality, 0, 'UTF-8') === false) continue;
     $result['cnt']++;
-    $result['area'] += $p['area_m2'] * $p['share_num'] / $p['share_den'];
+    $result['area'] += share_area($p['area_m2'], $p['share_num'], $p['share_den']);
   }
 
   return $result;

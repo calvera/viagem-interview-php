@@ -9,6 +9,12 @@ require_once dirname(__DIR__, 2) . '/includes/functions.php';
  */
 class FunctionsTest extends TestCase
 {
+  protected function tearDown(): void
+  {
+    $_GET = array();
+    $_POST = array();
+  }
+
   public function testHEscapesSpecialCharacters()
   {
     $this->assertSame('&lt;a href=&quot;x&quot;&gt;Tom &amp; Jerry&#039;s&lt;/a&gt;', h('<a href="x">Tom & Jerry\'s</a>'));
@@ -58,8 +64,7 @@ class FunctionsTest extends TestCase
       'datetime' => array('2021-05-15 17:05:00', '15. 5. 2021 17:05'),
       'null' => array(null, '–'),
       'zero datetime' => array('0000-00-00 00:00:00', '–'),
-      // Today's behavior: a zero date without time is not treated as empty.
-      'zero date' => array('0000-00-00', '30. 11. -0001 00:00'),
+      'zero date' => array('0000-00-00', '–'),
     );
   }
 
@@ -116,10 +121,53 @@ class FunctionsTest extends TestCase
     $this->assertSame('abcde…', trim_text('abcdefghij', 5));
   }
 
-  public function testTrimTextAddsEllipsisWhenOnlyBytesExceedLimit()
+  public function testTrimTextCountsCharactersNotBytes()
   {
-    // Today's behavior: the length check counts bytes, the cut counts characters.
-    $this->assertSame('žluťoučký…', trim_text('žluťoučký', 10));
+    $this->assertSame('žluťoučký', trim_text('žluťoučký', 10));
+    $this->assertSame('žluť…', trim_text('žluťoučký', 4));
+  }
+
+  /**
+   * @dataProvider shareAreaProvider
+   */
+  public function testShareArea($area, $num, $den, $expected)
+  {
+    $this->assertSame($expected, share_area($area, $num, $den));
+  }
+
+  public function shareAreaProvider()
+  {
+    return array(
+      'whole' => array('2500', '1', '1', 2500),
+      'half' => array('2500', '1', '2', 1250),
+      'third' => array(300, 1, 3, 100),
+      'zero denominator' => array('2500', '1', '0', null),
+      'zero denominator and area' => array('0', '1', '0', null),
+    );
+  }
+
+  public function testGetParamReturnsStringValue()
+  {
+    $_GET = array('search' => 'Novák');
+
+    $this->assertSame('Novák', get_param('search'));
+    $this->assertSame('x', get_param('missing', 'x'));
+  }
+
+  public function testGetParamIgnoresArray()
+  {
+    $_GET = array('search' => array('x'), 'url' => array('owners'));
+
+    $this->assertNull(get_param('search'));
+    $this->assertSame('', get_param('url', ''));
+  }
+
+  public function testPostParamIgnoresArray()
+  {
+    $_POST = array('title' => array('x'), 'last_name' => 'Novák');
+
+    $this->assertSame('', post_param('title', ''));
+    $this->assertSame('Novák', post_param('last_name'));
   }
 
   /**

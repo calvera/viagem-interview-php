@@ -60,7 +60,7 @@ if (count($parcels))
   foreach ($parcels as $p)
   {
     $total_area += $p['area_m2'];
-    $share_area += $p['area_m2'] * $p['share_num'] / $p['share_den'];
+    $share_area += share_area($p['area_m2'], $p['share_num'], $p['share_den']);
   }
 }
 
@@ -123,6 +123,7 @@ if (count($parcels))
     </thead>
     <tbody>
 <?php foreach ($parcels as $p) { ?>
+<?php $p_share_area = share_area($p['area_m2'], $p['share_num'], $p['share_den']) ?>
       <tr>
         <td><?php echo h($p['municipality_name']) ?></td>
         <td><?php echo h($p['cadastral_area']) ?> <small>(<?php echo $p['cadastral_code'] ?>)</small></td>
@@ -131,7 +132,7 @@ if (count($parcels))
         <td><?php echo h(mb_ucFirst($p['land_type'])) ?></td>
         <td class="right"><?php echo format_area($p['area_m2']) ?></td>
         <td class="right"><?php echo format_share($p['share_num'], $p['share_den']) ?></td>
-        <td class="right"><?php echo format_area(round($p['area_m2'] * $p['share_num'] / $p['share_den'])) ?></td>
+        <td class="right"><?php echo $p_share_area === null ? '–' : format_area(round($p_share_area)) ?></td>
       </tr>
 <?php } ?>
     </tbody>

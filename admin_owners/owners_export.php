@@ -5,6 +5,17 @@ require_once ROOT . '/admin_owners/owners_functions.php';
 $section = owners_build_section(null, true);
 $section->setLimit(EXPORT_LIMIT);
 
+// Do-not-contact owners are left out in SQL, so the limit counts only exported rows.
+$skipped = 0;
+if (!get_param('all'))
+{
+  $dnc_section = owners_build_section(null, true);
+  $dnc_section->addSQLWhereString("o.do_not_contact = '1'");
+  $skipped = $dnc_section->getCount();
+
+  $section->addSQLWhereString("o.do_not_contact <> '1'");
+}
+
 $rows = $section->getRows(false);
 if (!$rows) $rows = array();
 
@@ -25,17 +36,10 @@ $head = array('ID', 'Typ', 'Titul', 'Jméno', 'Příjmení / název', 'Datum nar
   'Obec (KN)', 'Telefon', 'E-mail', 'Termín oslovení', 'Založeno');
 fputcsv($out, $head, ';', '"', '\\');
 
-$skipped = 0;
 $exported = 0;
 
 foreach ($rows as $r)
 {
-  if ($r['do_not_contact'] === '1' && !get_param('all'))
-  {
-    $skipped++;
-    continue;
-  }
-
   if ((int)$r['duedate'] == 0) $duedate = '';
   else $duedate = date('d.m.Y', strtotime($r['duedate']));
 

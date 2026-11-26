@@ -78,7 +78,7 @@ $page_title = 'Úprava – ' . owner_name($owner);
     </td></tr>
     <tr><th>Telefon</th><td><input type="text" name="phone" value="<?php echo h($owner['phone']) ?>"></td></tr>
     <tr><th>E-mail</th><td><input type="text" name="email" value="<?php echo h($owner['email']) ?>" size="40"></td></tr>
-    <tr><th>Termín oslovení</th><td><input type="date" name="duedate" value="<?php echo (int)$owner['duedate'] == 0 ? '' : h($owner['duedate']) ?>"></td></tr>
+    <tr><th>Termín oslovení</th><td><input type="date" name="duedate" value="<?php echo $owner['duedate'] === '0000-00-00' ? '' : h($owner['duedate']) ?>"></td></tr>
     <tr><th>Neoslovovat</th><td>
       <label><input type="checkbox" name="do_not_contact" value="1"<?php if ($owner['do_not_contact'] === '1') echo ' checked' ?>> vlastník si nepřeje být kontaktován</label>
     </td></tr>

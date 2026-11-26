@@ -14,7 +14,7 @@ Všechna data jsou syntetická, generují se při prvním startu databáze.
 
 Aplikace nemá přihlášení, uživatel je pevně nastavený v `includes/config.php`.
 
-Známé problémy jsou v [TODO.md](TODO.md), změny v [CHANGELOG.md](CHANGELOG.md), přechod serveru na PHP 8.5 v [MIGRATION.md](MIGRATION.md).
+Stručný popis řešení k odevzdání je v [GUIDE.md](GUIDE.md). Známé problémy jsou v [TODO.md](TODO.md), změny v [CHANGELOG.md](CHANGELOG.md), přechod serveru na PHP 8.5 v [MIGRATION.md](MIGRATION.md).
 
 ## Spuštění
 
@@ -55,8 +55,8 @@ Kontrola „žádná PHP chyba“ hledá na stránce výpis fatální chyby a ch
 
 | Sada | Co ověřuje |
 | --- | --- |
-| `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování…) a skládání SQL v `Database::getWhere()`. Bez databáze. |
-| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, našeptávač (JSON), 404. Bez `APP_URL` se přeskočí. |
+| `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování, parametry GET/POST…) a skládání SQL v `Database::getWhere()`. Bez databáze. |
+| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu. Bez `APP_URL` se přeskočí. |
 | Playwright (`e2e/`) | Totéž v prohlížeči (Chromium) a navíc JavaScript a klikání: menu, filtry, řazení, stránkování, našeptávač obcí, potvrzovací dialog mazání poznámky (vždy se zruší), stažení CSV. Po každém testu ověří, že v konzoli prohlížeče není chyba a na stránce není výpis fatální chyby ani chyby syntaxe. Test mazání poznámky navíc požadavek `delete_note=` v prohlížeči zablokuje, takže poznámku nesmaže, ani kdyby potvrzovací dialog nefungoval. |
 
 Nejdřív spusťte aplikaci (`docker compose up -d`, viz výše). Výpis vlastníků je pomalý (jednotky až desítky sekund na stránku), smoke sada proto trvá asi minutu a Playwright asi dvě.
@@ -86,7 +86,7 @@ APP_URL=http://localhost:8085 vendor/bin/phpunit --testsuite smoke
 cd e2e && npx playwright test --project=php85
 ```
 
-Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 69, smoke 21, Playwright 18 testů na každou verzi).
+Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 80, smoke 27, Playwright 18 testů na každou verzi).
 
 Skripty `composer test` a `composer test:smoke` spouští PHPUnit pod PHP hostitele (v image `php74` Composer není). Pro unit testy na PHP 7.4 proto použijte příkaz s `docker compose run` výše.
 
@@ -106,7 +106,7 @@ Spouští se z hostitele (PHP 8.x), verzi, pro kterou se kód kontroluje, určuj
 ## Migrace na PHP 8.5 – rozhodnutí
 
 - **Jeden kód pro 7.4 i 8.5.** Nasazuje se nahráním souborů a PHP na serveru se upgraduje nezávisle, takže kód musí fungovat před přepnutím i po něm. Používá se jen syntaxe a funkce dostupné v 7.4 (žádné `match`, enumy, `str_contains`…). Návrat při problému je přepnutí PHP zpět, kód se nevrací.
-- **Chování se nemění** (kromě ručně podvržených požadavků s polem v parametrech nebo `duedate` jako `0.5`, viz TODO.md). Kde se PHP 8 chová jinak, kód napodobuje chování 7.4, i když není ideální (např. vnořený ternární operátor v detailu vlastníka je uzávorkovaný tak, jak ho vyhodnocovalo 7.4; návrh v TODO na `owner_name()` by změnil jméno fyzické osoby s titulem bez křestního jména). Známé chyby zachycené testy (`trim_text`, `format_datetime('0000-00-00')`, apostrofy v `getWhere`) zůstávají, opravují se zvlášť.
+- **Chování se nemění.** Kde se PHP 8 chová jinak, kód napodobuje chování 7.4, i když není ideální (např. vnořený ternární operátor v detailu vlastníka je uzávorkovaný tak, jak ho vyhodnocovalo 7.4; návrh v TODO na `owner_name()` by změnil jméno fyzické osoby s titulem bez křestního jména). Známé chyby (`trim_text`, `format_datetime('0000-00-00')`, apostrofy v `getWhere`, pole v parametrech, `duedate` jako `0.5` a další z *Chyby v logice* v TODO.md) se při migraci neopravovaly; opravené jsou zvlášť po migraci, stejně na obou verzích.
 - **PDO jako v 7.4.** PHP 8 změnilo dvě výchozí hodnoty PDO: chyby SQL vyhazují výjimku a čísla z MySQL chodí jako `int`. Obojí je v `Database::connect()` nastavené zpět (`ERRMODE_SILENT`, `ATTR_STRINGIFY_FETCHES`), místo úprav na desítkách míst, která s chováním 7.4 počítají (`=== '1'`, `if (!$res)`).
 - **Porovnání řetězce s číslem** (`$r['duedate'] == 0`) se v PHP 8 změnilo; `(int)$r['duedate'] == 0` dává na obou verzích výsledek jako 7.4.
 - **Přibalená knihovna `plugin/minify/`** má jedinou úpravu (`$s{$i}` → `$s[$i]`), bez ní se na PHP 8 nenačte žádná stránka.

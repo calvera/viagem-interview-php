@@ -4,6 +4,28 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.6] – 2026-11-26
+
+### Opraveno
+
+- `trim_text()` porovnává délku ve znacích, ne v bajtech: krátká poznámka s diakritikou na přehledu už nedostane „…“, když se nic neuřízlo.
+- `format_datetime('0000-00-00')` vrací prázdnou hodnotu jako `format_date()` místo `30. 11. -0001 00:00`.
+- `Database::getWhere()` odstraní z hodnoty v apostrofech jen okrajové apostrofy, vnitřní zůstanou (`'O'Brien'` → `O'Brien`).
+- Vlastnický podíl se jmenovatelem 0 (`share_den = 0`) už na PHP 8 neshodí detail vlastníka ani výpis s filtrem obce (`DivisionByZeroError`) a na 7.4 neukazuje „inf ha“ / „nan m²“. Nová funkce `share_area()`: do součtů přispívá nulou, „Výměra podílu“ ukazuje „–“.
+- Parametr GET/POST jako pole (`search[]=x`, `title[]=x`…) `get_param()` / `post_param()` ignorují a vrátí výchozí hodnotu: nehledá se ani neukládá text „Array“ a `?url[]=x`, `?sort[]=x`, `ajax_municipalities.php?q[]=x` a POST `duedate[]=x` na PHP 8 nespadnou na `TypeError`.
+- Úprava vlastníka po chybě validace zobrazí odeslaný termín oslovení (např. `0.5`), prázdné pole jen pro nulové datum z databáze.
+- Export: vlastníci se zákazem oslovení se vynechávají už v SQL, takže limit 20 000 počítá jen exportované řádky. Počet v řádku „Vynecháno N vlastníků se zákazem oslovení“ zahrnuje všechny vlastníky odpovídající filtru, ne jen ty mezi prvními 20 000.
+
+### Přidáno
+
+- `GUIDE.md`: stručný popis řešení k odevzdání (postup, co máme, rozhodnutí); pravidlo v `CLAUDE.md`, že ho každá položka udržuje aktuální.
+- Unit testy `share_area()`, `get_param()` a `post_param()` s polem; smoke testy pro pole v parametrech `url`, `search`, `sort` a `q` našeptávače a pro vynechání vlastníků se zákazem oslovení v exportu (s `all` i bez něj); unit testy okrajových případů apostrofů v `getWhere()`.
+- TODO: nové otevřené položky – pole ve formuláři úpravy uloží prázdný termín / poznámku, `delete_note[]` hlásí smazání, `format_share('0', '0')` vrací „celý“.
+
+### Změněno
+
+- Unit testy, které zachycovaly chybné chování `trim_text()`, `format_datetime('0000-00-00')` a apostrofů v `getWhere()`, ověřují správné chování.
+
 ## [2.7.5] – 2026-11-26
 
 ### Opraveno

@@ -6,7 +6,7 @@ Body označené **ověřit** vycházejí z kódu a z Dockeru, ne z produkčního
 
 ## 1. Co se v kódu změnilo a proč
 
-Pravidlo: na PHP 7.4 se chování nesmí změnit a na 8.5 musí být stejné jako na 7.4. Používá se jen syntaxe dostupná v 7.4. Výjimkou jsou jen ručně podvržené požadavky (pole v parametrech, `duedate` jako `0.5`), viz *Chyby v logice* v TODO.md.
+Pravidlo: na PHP 7.4 se chování nesmí změnit a na 8.5 musí být stejné jako na 7.4. Používá se jen syntaxe dostupná v 7.4. Opravy chyb v logice po migraci (*Chyby v logice* v TODO.md a CHANGELOG) mění chování na obou verzích stejně.
 
 ### Syntaxe (na PHP 8 se soubor vůbec nenačte)
 
@@ -23,7 +23,7 @@ Pravidlo: na PHP 7.4 se chování nesmí změnit a na 8.5 musí být stejné jak
 | --- | --- | --- |
 | `class/Database.php` | PDO od 8.0 při chybě SQL vyhazuje výjimku; aplikace čeká `false` (např. druhý noční report za den spadl na duplicitním `run_date`) | `PDO::ATTR_ERRMODE => PDO::ERRMODE_SILENT` (výchozí hodnota v 7.4) |
 | `class/Database.php` | PDO MySQL od 8.1 vrací čísla jako `int`; `do_not_contact === '1'` by přestalo platit (štítek „neoslovovat“, export by nevynechal vlastníky se zákazem oslovení) | `PDO::ATTR_STRINGIFY_FETCHES => true`, typy jsou stejné jako v 7.4 |
-| výpis, úprava a export vlastníků | `'0000-00-00' == 0` platí v 7.4, v 8 ne (porovnání řetězce s číslem) | `(int)$r['duedate'] == 0`, na obou verzích výsledek jako v 7.4 |
+| výpis, úprava a export vlastníků | `'0000-00-00' == 0` platí v 7.4, v 8 ne (porovnání řetězce s číslem) | `(int)$r['duedate'] == 0` (výpis, export), na obou verzích výsledek jako v 7.4; formulář úpravy po opravě chyb v logice `=== '0000-00-00'`, aby po chybě validace ukázal odeslanou hodnotu |
 | detail vlastníka, `owner_parcels()` | `count(null)` hází od 8.0 `TypeError` (neexistující vlastník, vlastník bez parcel) | `if (!$owner)`, `owner_parcels()` vrací prázdné pole |
 | `cron/nightly_report.php` | curl handle je od 8.0 objekt, `is_resource()` vrací `false`, report nikdy nepingl službu | `if (!$ch)` |
 
@@ -35,7 +35,7 @@ Pravidlo: na PHP 7.4 se chování nesmí změnit a na 8.5 musí být stejné jak
 
 - Testy z úkolu 0 (unit, smoke, Playwright) beze změny, zelené na 7.4 i 8.5.
 - PHPStan úrovně 2 pro 7.4 i 8.5 (`phpstan.neon`, `phpstan-php85.neon`), viz README.
-- Ručně: celá aplikace s dočasným `E_ALL` a logem do souboru na obou verzích, na testovacích datech bez jediného hlášení; HTML stránek je na 7.4 i 8.5 shodné. Hodnoty, které testovací data nemají (`NULL` v `land_type`, `lv_number`, `municipality_name`, `share_den = 0`), ošetřené nejsou, jsou zapsané v TODO.
+- Ručně: celá aplikace s dočasným `E_ALL` a logem do souboru na obou verzích, na testovacích datech bez jediného hlášení; HTML stránek je na 7.4 i 8.5 shodné. Hodnoty `NULL` v `land_type`, `lv_number`, `municipality_name`, které testovací data nemají, ošetřené nejsou, jsou zapsané v TODO. `share_den = 0` a pole v parametrech GET/POST jsou ošetřené (oprava chyb v logice), na PHP 8 už nic neshodí.
 
 ## 2. Co nastavit na serveru
 
@@ -59,7 +59,7 @@ Aplikace potřebuje jen to, co je v `docker/php/app.ini`: `date.timezone = Europ
 Nic se nemění. Připojení (`utf8mb4`, `sql_mode = ''`, emulované prepared statements, typy a chyby jako v 7.4) nastavuje `Database::connect()`.
 
 - Adresa databáze se čte z proměnné prostředí `DB_HOST` (`includes/config.php:14`, bez ní `db`). Nové PHP ji musí dostat stejně jako staré: Apache (`SetEnv` / `PassEnv`) nebo pool PHP-FPM (`env[DB_HOST] = …`, FPM ve výchozím stavu prostředí maže) a cron (proměnná v crontabu). **ověřit**, kde je nastavená dnes.
-- **ověřit před přepnutím:** `select count(*) from ownerships where share_den = 0`. Pokud vyjde víc než 0, na PHP 8.x detail těchto vlastníků a výpis vlastníků s filtrem obce spadnou na nezachycené `DivisionByZeroError` (na 7.4 ukazují „inf ha“). Data opravit dřív, než se PHP přepne (TODO, *Chyby v logice*).
+- **doporučeno ověřit:** `select count(*) from ownerships where share_den = 0`. Na přepnutí to nemá vliv: neplatný podíl už na PHP 8 nic neshodí, do součtů výměry přispívá nulou a „Výměra podílu“ ukazuje „–“ (`share_area()`). Pokud takové řádky jsou, jde o chybu v datech, kterou je dobré opravit.
 
 ### Práva k zápisu
 
@@ -84,7 +84,7 @@ Noční report musí spouštět CLI nového PHP:
 ## 3. Postup nasazení
 
 1. Nahrát nový kód na server s PHP 7.4 (běžné nasazení změněných souborů).
-2. Ověřit na 7.4 (kapitola 4). Kód je pro 7.4 beze změny chování (kromě ručně podvržených požadavků, viz TODO.md).
+2. Ověřit na 7.4 (kapitola 4). Kód je pro 7.4 beze změny chování kromě oprav chyb v logice (CHANGELOG), které platí stejně na obou verzích.
 3. Připravit PHP 8.5 vedle 7.4 (rozšíření, `php.ini`), přepnout web (Apache / PHP-FPM) i cron na 8.5.
 4. Ověřit na 8.5 (kapitola 4).
 5. Návrat: přepnout web i cron zpět na PHP 7.4. Kód zůstává.

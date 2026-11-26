@@ -104,11 +104,23 @@ class DatabaseWhereTest extends TestCase
     $this->assertSame(array(':o_type' => 'F', ':o_type_2' => 'P'), $this->db->bind_params);
   }
 
-  public function testQuotedValueLosesAllApostrophes()
+  /**
+   * @dataProvider quotedValueProvider
+   */
+  public function testQuotedValueLosesOnlyOuterApostrophes($value, $expected)
   {
-    // Today's behavior: every apostrophe in a quoted value is removed, not only the outer quotes.
-    $this->db->getWhere(array("o.last_name = 'O'Brien'"));
+    $this->db->getWhere(array('o.last_name = ' . $value));
 
-    $this->assertSame(array(':o_last_name' => 'OBrien'), $this->db->bind_params);
+    $this->assertSame(array(':o_last_name' => $expected), $this->db->bind_params);
+  }
+
+  public function quotedValueProvider()
+  {
+    return array(
+      'inner apostrophe' => array("'O'Brien'", "O'Brien"),
+      'empty' => array("''", ''),
+      'trailing apostrophe' => array("'F''", "F'"),
+      'only apostrophe' => array("'''", "'"),
+    );
   }
 }

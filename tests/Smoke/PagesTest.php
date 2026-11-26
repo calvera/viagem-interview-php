@@ -49,6 +49,9 @@ class PagesTest extends TestCase
       'parcels by land type' => array('/index.php?url=parcels&f_land_type=orn%C3%A1%20p%C5%AFda', 'Parcely', '<td class="col_string">Orná půda</td>'),
       'municipalities' => array('/index.php?url=municipalities', 'Obce', 'f_municipality='),
       'municipalities by region' => array('/index.php?url=municipalities&f_region=Z%C3%A1padn%C3%AD%20kraj', 'Obce', '<td class="col_string">Západní kraj</td>'),
+      'array url is ignored' => array('/index.php?url%5B%5D=x', 'Přehled', 'Poslední poznámky'),
+      'array search is ignored' => array('/index.php?url=owners&search%5B%5D=x', 'Vlastníci pozemků', 'class="pagination"'),
+      'array sort is ignored' => array('/index.php?url=municipalities&sort%5B%5D=x', 'Obce', 'f_municipality='),
     );
   }
 
@@ -75,6 +78,31 @@ class PagesTest extends TestCase
     $this->assertStringContainsString(';"Právnická osoba";', $lines[2]);
   }
 
+  public function testExportSkipsDoNotContactOwners()
+  {
+    $response = $this->get('/index.php?url=owners/export&f_type=P&f_dnc=1');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+
+    $lines = explode("\n", $response['body']);
+    $this->assertCount(5, $lines);
+    $this->assertSame('', $lines[2]);
+    $this->assertMatchesRegularExpression('~^"Vynecháno [1-9]\d* vlastníků se zákazem oslovení\."$~u', $lines[3]);
+  }
+
+  public function testExportAllIncludesDoNotContactOwners()
+  {
+    $response = $this->get('/index.php?url=owners/export&f_type=P&f_dnc=1&all=1');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+
+    $lines = explode("\n", $response['body']);
+    $this->assertStringContainsString(';"Právnická osoba";', $lines[2]);
+    $this->assertStringNotContainsString('Vynecháno', $response['body']);
+  }
+
   public function testAutocompleteReturnsJson()
   {
     $response = $this->get('/ajax_municipalities.php?q=Lh');
@@ -91,6 +119,14 @@ class PagesTest extends TestCase
   public function testAutocompleteNeedsTwoCharacters()
   {
     $response = $this->get('/ajax_municipalities.php?q=L');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertSame('[]', $response['body']);
+  }
+
+  public function testAutocompleteIgnoresArray()
+  {
+    $response = $this->get('/ajax_municipalities.php?q%5B%5D=Lh');
 
     $this->assertSame(200, $response['status']);
     $this->assertSame('[]', $response['body']);

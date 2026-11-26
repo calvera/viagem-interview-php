@@ -1,6 +1,6 @@
 # Pravidla projektu
 
-Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `CHANGELOG.md`, `MIGRATION.md`, `CLAUDE.md`) se píší česky.
+Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `CHANGELOG.md`, `MIGRATION.md`, `GUIDE.md`, `CLAUDE.md`) se píší česky.
 
 ## Postup u pracovních položek
 
@@ -10,7 +10,8 @@ Každá pracovní položka (jeden úkol z `TODO.md` nebo jedna ucelená změna) 
    - provede změny v kódu a spustí testy,
    - odškrtne nebo upraví položku v `TODO.md`,
    - přidá záznam pod `## [Nevydáno]` v `CHANGELOG.md`,
-   - aktualizuje `MIGRATION.md`, pokud se změna týká migrace nebo serveru.
+   - aktualizuje `MIGRATION.md`, pokud se změna týká migrace nebo serveru,
+   - aktualizuje `GUIDE.md`: stav kroku a stručně co a proč.
 2. **Review**: read-only review agentem Fable (`sonnet-checker` s `model: fable`). Jen čte diff a kód: nespouští testy a nic nemění. Testy spouští builder.
 3. **Opakování**: pokud review není čisté, jeho nálezy jdou zpět stejnému builderovi (SendMessage) a následuje další review. Položka je hotová, až když je review čisté.
 4. **Vydání**: po čistém review dostane položka vlastní verzi:
@@ -23,3 +24,7 @@ Každá pracovní položka (jeden úkol z `TODO.md` nebo jedna ucelená změna) 
 ## MIGRATION.md
 
 `MIGRATION.md` popisuje, co jsme při migraci na PHP 8.5 udělali, a co je potřeba přenastavit na produkčním serveru (rozšíření, php.ini, locale, cron, změny v databázi, pořadí nasazení, návrat zpět, ověření). Každá položka, která mění něco důležitého pro server nebo migraci, ho aktualizuje v kroku Stavba a review kontroluje, že je aktuální.
+
+## GUIDE.md
+
+`GUIDE.md` je popis řešení k odevzdání technické úlohy. Stručně a jasně říká, co se udělalo a proč, a odkazuje na podrobné dokumenty. Píše se pro hodnotitele úlohy, ne pro provoz. Každá položka ho aktualizuje v kroku Stavba a review kontroluje, že odpovídá skutečnosti.
