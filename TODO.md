@@ -79,6 +79,7 @@ Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené (`php -l
 ### Výkon
 
 - [ ] N+1 dotazy ve výpisu vlastníků: název obce a počet parcel pro každý řádek, s filtrem obce navíc všechny parcely vlastníka (`owners_list_row()`).
+- [ ] Filtr obce ve výpisu vlastníků. Odkaz „vlastníci“ z výpisu obcí (`admin_municipalities/municipalities_section.php:8`) posílá název obce a filtr hledá podřetězec (`m.name like %…%`), takže „Lhota“ najde 20 000 vlastníků místo 240 (i Horní, Dolní… Lhota). Sloupec „V obci“ pro každý řádek načte všechny parcely vlastníka a filtruje je v PHP přes `mb_stripos` (`owner_parcels_in_municipality()`), opět podle podřetězce. Změřeno na PHP 8.5: bez filtru 8,1 s, „Lhota“ 21,3 s, „Horní Lhota“ (2 000 vlastníků) 24,0 s, zdržuje tedy práce na řádku, ne počet nalezených. Řešení: odkaz přes id (`f_municipality_id`, skrytý filtr v `Section`), „V obci“ spočítat v SQL podle `p.municipality_id`. Co filtr znamená (obec vlastníka, nebo vlastníci parcel v obci), viz `OPENQUESTIONS.md`, otázka 1.
 - [ ] N+1 dotazy ve výpisu parcel (vlastníci každé parcely) a obcí (počet parcel každé obce).
 - [ ] Chybí index `ownerships.owner_id` (1,2 mil. řádků).
 - [ ] Výchozí řazení vlastníků `concat(last_name, ' ', first_name)` nevyužije index.
