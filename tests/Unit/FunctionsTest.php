@@ -91,6 +91,78 @@ class FunctionsTest extends TestCase
       'hectares' => array(12345, '1,23 ha'),
       'string from DB' => array('2500', '2 500 m²'),
       'null from DB' => array(null, '0 m²'),
+      'share sum exactly half, float just below' => array(1 / 3 + 1 / 12 + 1 / 12, '1 m²'),
+      'literal just below half' => array(0.49999999999999994, '1 m²'),
+      'two ulps below half' => array(0.4999999999999999, '1 m²'),
+      'six ulps below 4.5 as on 7.4' => array(4.499999999999995, '4 m²'),
+      '29 ulps below 14.5 as on 7.4' => array(14.499999999999948, '15 m²'),
+      'half' => array(0.5, '1 m²'),
+      'below half' => array(0.4999, '0 m²'),
+      'ten decimal places below half' => array(0.4999999996, '0 m²'),
+      'float just below 1.5' => array(1.4999999999999998, '2 m²'),
+      'negative just below half' => array(-0.49999999999999994, '-1 m²'),
+      'negative half' => array(-0.5, '-1 m²'),
+      'below hectare rounds up' => array(9999.5, '10 000 m²'),
+      'below hectare rounds down' => array(9999.4, '9 999 m²'),
+      'hectares half up' => array(10050, '1,01 ha'),
+      'hectares below half' => array(10049, '1,00 ha'),
+      'hectares share sum exactly half, float just below' => array(47405 * 10 / 12 + 59740 + 8919 + 37422 * 2 / 9 + 11825 * 2 / 12, '11,85 ha'),
+    );
+  }
+
+  /**
+   * @dataProvider areaValueProvider
+   */
+  public function testAreaValue($m2, $expected)
+  {
+    $this->assertSame($expected, area_value($m2));
+  }
+
+  public function areaValueProvider()
+  {
+    return array(
+      'share sum exactly half' => array(1 / 3 + 1 / 12 + 1 / 12, 0.5),
+      'fifteen significant digits kept' => array(1.23456789012345, 1.23456789012345),
+      'ten decimal places kept' => array(0.4999999996, 0.4999999996),
+      'large share sum exactly half' => array(5000049.499999999, 5000049.5),
+      'string from DB' => array('2500', 2500.0),
+      'zero' => array(0, 0.0),
+      'null from DB' => array(null, 0.0),
+    );
+  }
+
+  /**
+   * Owner detail rounds the share area to whole m² before format_area().
+   * @dataProvider detailShareAreaProvider
+   */
+  public function testDetailShareArea($area, $expected)
+  {
+    $this->assertSame($expected, format_area(round(area_value($area))));
+  }
+
+  public function detailShareAreaProvider()
+  {
+    return array(
+      'share sum exactly half' => array(1 / 3 + 1 / 12 + 1 / 12, '1 m²'),
+      'below half' => array(0.4999999996, '0 m²'),
+      'large share sum exactly half' => array(5000049.499999999, '500,01 ha'),
+      'larger share sum exactly half' => array(20000049.499999996, '2 000,01 ha'),
+    );
+  }
+
+  /**
+   * @dataProvider detailRoundProvider
+   */
+  public function testDetailRound($area, $expected)
+  {
+    $this->assertSame($expected, round(area_value($area)));
+  }
+
+  public function detailRoundProvider()
+  {
+    return array(
+      'large share sum exactly half' => array(5000049.499999999, 5000050.0),
+      'larger share sum exactly half' => array(20000049.499999996, 20000050.0),
     );
   }
 

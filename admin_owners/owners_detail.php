@@ -108,7 +108,7 @@ if (count($parcels))
     <tr><th>Založeno</th><td><?php echo format_datetime($owner['created_at']) ?></td></tr>
     <tr><th>Počet parcel</th><td><?php echo count($parcels) ?></td></tr>
     <tr><th>Výměra celkem</th><td><?php echo format_area($total_area) ?></td></tr>
-    <tr><th>Výměra dle podílů</th><td><?php echo format_area(round($share_area)) ?></td></tr>
+    <tr><th>Výměra dle podílů</th><td><?php echo format_area(round(area_value($share_area))) ?></td></tr>
     <tr><th>Poznámka</th><td><?php echo nl2br(h($owner['note'])) ?></td></tr>
   </table>
 </div>
@@ -142,7 +142,7 @@ if (count($parcels))
         <td><?php echo h(mb_ucFirst((string)$p['land_type'])) ?></td>
         <td class="right"><?php echo format_area($p['area_m2']) ?></td>
         <td class="right"><?php echo format_share($p['share_num'], $p['share_den']) ?></td>
-        <td class="right"><?php echo $p_share_area === null ? '–' : format_area(round($p_share_area)) ?></td>
+        <td class="right"><?php echo $p_share_area === null ? '–' : format_area(round(area_value($p_share_area))) ?></td>
       </tr>
 <?php } ?>
     </tbody>

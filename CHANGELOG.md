@@ -4,6 +4,12 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.8.4] – 2026-11-26
+
+### Opraveno
+
+- `format_area()` a výměra podílu v detailu vlastníka zaokrouhlovaly hodnotu těsně pod polovinou na PHP 8.5 jinak než na 7.4: součet podílů 1/3 + 1/12 + 1/12 z 1 m² (v plovoucí čárce `0.49999999999999994`) dal na 7.4 „1 m²“, na 8.5 „0 m²“, součet podílů přesně 118 450 m² na 7.4 „11,85 ha“, na 8.5 „11,84 ha“. Příčina: PHP 8.4 v `round()` a `number_format()` zrušilo „pre-rounding“ na 15 platných číslic (od 1 výše) a přepsalo zaokrouhlení na celé číslo (pod 1 dříve `floor(x + 0.5)`), UPGRADING 8.4, GH-12143. Hodnota se před zaokrouhlením předzaokrouhlí na 15 platných číslic stejnými kroky jako v 7.4 (`area_value()` v `includes/functions.php`, použitá ve `format_area()` a v `admin_owners/owners_detail.php`), výstup je na obou verzích stejný jako dosud na 7.4 (ověřeno na 4,2 mil. hodnot: součty podílů do 1e8 m², hodnoty x,5 a jejich sousedé v plovoucí čárce do 1e9). Pod 1 m² se pár hodnot těsně pod 0,5 nově zaokrouhlí nahoru i na 7.4 (reálně jen výměra podílu malé parcely). Týká se sloupce „V obci“ (textový filtr i filtr podle id obce) a detailu vlastníka; jen na přesné hranici zaokrouhlení, testovací data ji nezasáhnou (HTML stránek beze změny). Unit testy hraničních hodnot pro m² i ha.
+
 ## [2.8.3] – 2026-11-26
 
 ### Přidáno

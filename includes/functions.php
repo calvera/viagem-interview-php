@@ -119,10 +119,29 @@ function format_datetime($date, $empty = '–')
   return date('j. n. Y H:i', strtotime($date));
 }
 
+/**
+ * Value (m² or ha) pre-rounded to 15 significant digits the way round() did it on PHP 7.4,
+ * with the same float steps, so round() and number_format() give the 7.4 result on 7.4 and 8.5.
+ * PHP 8.4 dropped this pre-rounding (from 1 up) and rewrote rounding to an integer (below 1,
+ * 7.4 used floor(x + 0.5)). A float sum like 1/3 + 1/12 + 1/12 of 1 m² (0.49999999999999994,
+ * exactly 0.5) then rounds down. Below 1 a few values just under 0.5 now round up on 7.4 too.
+ * Not round($value, 14 - floor(log10)): on 8.4+ that differs from 7.4 in the 16th digit.
+ */
+function area_value($value)
+{
+  $value = (float)$value;
+  if ($value == 0) return $value;
+  $places = 14 - (int)floor(log10(abs($value)));
+  $f = pow(10.0, abs($places));
+  $t = $places >= 0 ? $value * $f : $value / $f;
+  $t = $t >= 0 ? floor($t + 0.5) : ceil($t - 0.5);
+  return $places >= 0 ? $t / $f : $t * $f;
+}
+
 function format_area($m2)
 {
-  if ($m2 >= 10000) return number_format($m2 / 10000, 2, ',', ' ') . ' ha';
-  return number_format((float)$m2, 0, ',', ' ') . ' m²';
+  if ($m2 >= 10000) return number_format(area_value($m2 / 10000), 2, ',', ' ') . ' ha';
+  return number_format(area_value($m2), 0, ',', ' ') . ' m²';
 }
 
 /**

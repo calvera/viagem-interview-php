@@ -19,7 +19,7 @@ define('DB_USER', 'crm');
 define('DB_PASS', 'crm');
 
 define('APP_NAME', 'Evidence vlastníků');
-define('APP_VERSION', '2.8.3');
+define('APP_VERSION', '2.8.4');
 define('APP_USER', 'operator.a');
 
 define('LIST_LIMIT', 50);

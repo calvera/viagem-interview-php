@@ -26,6 +26,7 @@ Pravidlo: na PHP 7.4 se chování nesmí změnit a na 8.5 musí být stejné jak
 | výpis, úprava a export vlastníků | `'0000-00-00' == 0` platí v 7.4, v 8 ne (porovnání řetězce s číslem) | `(int)$r['duedate'] == 0` (výpis, export), na obou verzích výsledek jako v 7.4; formulář úpravy po opravě chyb v logice `=== '0000-00-00'`, aby po chybě validace ukázal odeslanou hodnotu |
 | detail vlastníka, `owner_parcels()` | `count(null)` hází od 8.0 `TypeError` (neexistující vlastník, vlastník bez parcel) | `if (!$owner)`, `owner_parcels()` vrací prázdné pole |
 | `cron/nightly_report.php` | curl handle je od 8.0 objekt, `is_resource()` vrací `false`, report nikdy nepingl službu | `if (!$ch)` |
+| `format_area()`, detail vlastníka | `round()` a `number_format()` od 8.4 nepoužívají „pre-rounding“ na 15 platných číslic (od 1 výše) a zaokrouhlení na celé číslo je přepsané (pod 1 dříve `floor(x + 0.5)`), UPGRADING 8.4, GH-12143: hodnota těsně pod polovinou, typicky součet podílů v plovoucí čárce, se zaokrouhlí dolů, na 7.4 nahoru (`0.49999999999999994` → „0 m²“ místo „1 m²“, součet podílů 118 450 m² → „11,84 ha“ místo „11,85 ha“); sloupec „V obci“ a výměra podílu v detailu | předzaokrouhlení na 15 platných číslic stejnými kroky jako v 7.4 (`area_value()`), na obou verzích výsledek jako v 7.4; pod 1 m² se pár hodnot těsně pod 0,5 nově zaokrouhlí nahoru i na 7.4 (reálně jen výměra podílu malé parcely); opraveno po migraci, na testovacích datech se HTML nemění |
 
 ### Deprecated (dnes jen varování, v PHP 9 chyba)
 

@@ -34,7 +34,7 @@ Každá dokončená položka má vlastní commit, verzi v `composer.json` a git 
 | | Stav |
 | --- | --- |
 | Aplikace na PHP 7.4 i 8.5 | hotovo (v2.7.5), připraveno k nasazení; před přepnutím serveru na 8.5 ověřit nastavení PHP na serveru; ošetřené i hodnoty `NULL` z databáze a locale |
-| Testy | 137 unit, 74 smoke, 20 Playwright; zelené na PHP 7.4 i 8.5 |
+| Testy | 166 unit, 74 smoke, 20 Playwright; zelené na PHP 7.4 i 8.5 |
 | Statická analýza | PHPStan level 2, bez chyb pro 7.4 i 8.5 |
 | Lokální prostředí | Docker: PHP 7.4 (`:8074`), PHP 8.5 (`:8085`), MariaDB se syntetickými daty |
 | Postup nasazení | [MIGRATION.md](MIGRATION.md): nastavení serveru, pořadí, návrat zpět, ověření, přehled DB migrací (tři indexy pro výpis vlastníků) |
@@ -67,6 +67,7 @@ Kromě zjevných chyb (syntaxe, kterou PHP 8 nenačte) byly nejdůležitější 
 - **PDO od 8.0 vyhazuje výjimky.** Aplikace počítá s tím, že chybný dotaz vrátí `false`. Výchozí režim ze 7.4 je nastavený výslovně.
 - **Porovnání řetězce s číslem.** `'0000-00-00' == 0` je na 7.4 pravda, na 8 ne. Na tom stojí prázdný termín oslovení.
 - **Vnořený ternární operátor** je uzávorkovaný tak, jak ho vyhodnocovalo 7.4. Jednodušší úprava by změnila zobrazení jména u části vlastníků.
+- **Zaokrouhlení od 8.4.** `round()` a `number_format()` už hodnotu od 1 výše předem nezaokrouhlují na 15 platných číslic a pod 1 zaokrouhlují jinak než 7.4 (`floor(x + 0.5)`), takže součet podílů těsně pod polovinou (`0.49999999999999994`, přesně 0,5) se na 8.5 zaokrouhlí dolů, na 7.4 nahoru. Výměry se proto před zaokrouhlením předzaokrouhlí na 15 platných číslic stejnými kroky jako na 7.4 (`area_value()`), výsledek je na obou verzích jako na 7.4. Pod 1 m² se pár hodnot těsně pod 0,5 nově zaokrouhlí nahoru i na 7.4 (reálně jen výměra podílu malé parcely). Našlo se až po migraci; na testovacích datech se neprojeví.
 
 Ověření: všechny testy zelené na obou verzích, PHPStan bez chyb pro 7.4 i 8.5, HTML vybraných stránek na obou verzích shodné.
 
