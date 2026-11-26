@@ -118,3 +118,30 @@ Testovací data jsou čistá: žádný řádek neodkazuje na neexistující záz
 **Doporučení:** b). Chrání data a nic nemaže potichu. `CASCADE` jen tam, kde to zadavatel výslovně chce.
 
 **Související:** Má mít vlastník k jedné parcele nejvýš jeden vlastnický vztah (unikátní klíč `(owner_id, parcel_id)` v `ownerships`), nebo jich může mít víc, třeba na různých LV?
+
+## 7. Minimální délka textového filtru „Obec“ ve výpisu vlastníků
+
+**Stav:** otevřená.
+
+**Otázka:** Má textový filtr „Obec“ ve výpisu vlastníků vyžadovat minimální délku zadaného textu (např. 2 nebo 3 znaky)?
+
+Filtr hledá podřetězec v názvu obce vlastníka (`m.name like %…%`). Od indexu `idx_owners_municipality` (migrace `003`, v2.8.3) databáze nejdřív najde obce podle názvu a jejich vlastníky čte z indexu. Cena dotazu proto roste s počtem nalezených vlastníků, asi o 3 stránky z buffer poolu na vlastníka (`MIGRATION.md`, 5.3). Změřeno na testovacích datech (celá 1. strana včetně `count(*)`, doba podle `ANALYZE`):
+
+| Filtr | Nalezených vlastníků | Bez indexu | S indexem |
+|---|---|---|---|
+| „Horní“ | 50 000 | 0,80 s | 0,21 s |
+| „nad“ | 85 000 | 0,76 s | 0,34 s |
+| „e“ | 400 640 | 0,72 s | 1,6 s |
+| „a“ | 466 000 | 0,70 s | 1,8 s |
+
+Běžné části názvu obce jsou s indexem 4× až 16× levnější (podle stránek z buffer poolu, „Lhota“ s 20 000 vlastníky asi 16×). Filtr, který najde víc než asi 40 % všech vlastníků (prakticky jedno písmeno), je 2,2× až 2,6× pomalejší než dříve. Takový filtr uživateli k ničemu není, výsledek je skoro celý výpis.
+
+**Varianty:**
+
+- a) Nechat jak je. Zpomalení se týká jen filtru, který prakticky nic nefiltruje.
+- b) Minimální délka (např. 2 znaky): kratší text se ignoruje a výpis se ukáže bez filtru, s upozorněním u pole. Našeptávač obcí už dnes hledá až od 2 znaků (`ajax_municipalities.php`, `js/app.js`).
+- c) Minimální délka jen pro hledání podřetězce: kratší text hledá jen obce, jejichž název tímto textem začíná (`like '…%'`).
+
+**Doporučení:** a), dokud se na produkci neukáže, že uživatelé jednopísmenný filtr opravdu zadávají (ověřit v logu přístupů parametr `f_municipality`). Jinak b).
+
+**Souvislosti:** `TODO.md`, položky *Filtr obce ve výpisu vlastníků: textové pole* a *Index na `owners.municipality_id`*; `MIGRATION.md`, 5.3.
