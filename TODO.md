@@ -68,6 +68,9 @@ Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené (`php -l
 
 - [ ] Export: limit 20 000 se uplatní před vynecháním vlastníků se zákazem oslovení, export pak může mít méně řádků, než odpovídá filtru.
 - [ ] `owner_parcels()` vrací pro vlastníka bez parcel `null` místo prázdného pole.
+- [ ] `trim_text()` (`includes/functions.php`) porovnává délku v bajtech (`strlen`), ale zkracuje ve znacích (`mb_substr`). Krátký text s diakritikou dostane „…“, i když se nic neuřízlo: `trim_text('žluťoučký', 10)` → `žluťoučký…`. Projeví se na přehledu u poznámek. Zachyceno unit testem.
+- [ ] `format_datetime('0000-00-00')` (datum bez času) nebere jako prázdnou hodnotu a vrátí `30. 11. -0001 00:00`. Zachyceno unit testem.
+- [ ] `Database::getWhere()` z hodnoty v uvozovkách odstraní všechny apostrofy, ne jen okrajové: `o.last_name = 'O'Brien'` naváže `OBrien`. Zachyceno unit testem.
 
 ### Ostatní
 
