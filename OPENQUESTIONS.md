@@ -65,7 +65,9 @@ Pole, které v odeslaném formuláři chybí úplně, se uloží jako prázdné 
 
 ## 5. Výchozí řazení výpisu vlastníků
 
-**Stav:** otevřená, blokuje položku *Výchozí řazení vlastníků* v `TODO.md` (sekce *Výkon*).
+**Stav:** rozhodnuto 2026-11-26: varianta b). Provede položka *Výchozí řazení vlastníků* v `TODO.md` (sekce *Výkon*).
+
+**Otázka:** Smí se pořadí vlastníků se stejným jménem na stranách výpisu změnit a kterou variantu zvolit?
 
 Výpis vlastníků se ve výchozím stavu řadí podle `concat(o.last_name, ' ', o.first_name)` (`admin_owners/owners_functions.php`). Na výraz nejde použít index, takže každá strana výpisu přečte a seřadí všech 500 tisíc vlastníků (`EXPLAIN`: `ALL`, `Using filesort`).
 
@@ -78,3 +80,39 @@ Výpis vlastníků se ve výchozím stavu řadí podle `concat(o.last_name, ' ',
 - c) Jen doplnit `id` jako rozhodující kritérium (`concat(…), id`). Pořadí je jednoznačné, ale výpis dál řadí všech 500 tisíc vlastníků.
 
 **Doporučení:** b). Na testovacích datech řadí `concat` i dvojice sloupců všech 1 070 jmen stejně (ověřeno porovnáním seznamů). Před změnou je potřeba totéž ověřit na produkčních datech: liší se např. u prázdného `first_name` (`NULL` udělá z celého `concat` `NULL`, takový vlastník je na začátku) nebo u příjmení s mezerou.
+
+**Souvislosti:** Kvůli přeskupování vlastníků se stejným jménem se zatím nepřidal index na `owners.municipality_id` (`TODO.md`, položka o indexu `ownerships.owner_id`, v2.7.9). Po zavedení jednoznačného řazení už index pořadí nezmění, takže se dá přidat (položka *Index na `owners.municipality_id`* v `TODO.md`; cizí klíče viz otázka 6). Na testovacích datech mají všechny právnické osoby (41 666) prázdné `first_name` a název v `last_name`, často s mezerou. U nich se `concat` a řazení podle dvou sloupců mohou lišit (např. firma „Nový Agro“ a osoba „Nový Adam“), proto se pořadí porovná na celých datech, nejen na seznamu jmen.
+
+**Výsledek:** varianta b), řadit podle `last_name, first_name, id` s indexem `(last_name, first_name, id)`. Viz položka *Výchozí řazení vlastníků* v `TODO.md`.
+
+## 6. Cizí klíče mezi tabulkami
+
+**Stav:** otevřená.
+
+**Otázka:** Má databáze hlídat vazby mezi tabulkami cizími klíči? Pokud ano, co se má stát při smazání vlastníka, parcely nebo obce, na které něco odkazuje?
+
+V databázi dnes nejsou žádné cizí klíče. Vazby hlídá jen aplikace:
+
+| Vazba | Typ | Index |
+|---|---|---|
+| `parcels.municipality_id` → `municipalities` | N:1 | ano |
+| `owners.municipality_id` → `municipalities` | N:1 | ne, položka v `TODO.md` |
+| `owner_notes.owner_id` → `owners` | N:1 | ano |
+| `ownerships.owner_id` → `owners` | M:N | ano (v2.7.9) |
+| `ownerships.parcel_id` → `parcels` | M:N | ano |
+
+Testovací data jsou čistá: žádný řádek neodkazuje na neexistující záznam, žádné `municipality_id = 0` a žádné duplicitní dvojice `(owner_id, parcel_id)`. Cizí klíče by tedy šly přidat. Rizika:
+
+- **Zápisy, které dnes projdou, by skončily chybou.** Sloupce mají `DEFAULT 0` a připojení běží se `sql_mode = ''`. Zápis bez hodnoty dnes potichu uloží 0, s cizím klíčem skončí chybou. Aplikace sama zapisuje jen do `owners` (úprava vlastníka) a maže jen poznámky. Do stejné databáze ale můžou zapisovat jiné moduly CRM nebo importy, a ty je potřeba projít.
+- **Produkční data.** Před přidáním je potřeba na produkci ověřit, že žádné řádky neodkazují na neexistující záznam. Jinak se cizí klíč nepřidá.
+- **Index na `owners.municipality_id`.** InnoDB k cizímu klíči sám založí index, pokud chybí. Proto až po položce *Výchozí řazení vlastníků* (otázka 5).
+
+**Varianty:**
+
+- a) Cizí klíče nepřidávat, vazby dál hlídá jen aplikace.
+- b) Cizí klíče s `ON DELETE RESTRICT`: smazat vlastníka, parcelu nebo obec, na které něco odkazuje, nepůjde.
+- c) Jako b), ale `ON DELETE CASCADE` u závislých záznamů (`owner_notes`, `ownerships`): se smazáním vlastníka nebo parcely zmizí i jeho poznámky a vlastnické vztahy.
+
+**Doporučení:** b). Chrání data a nic nemaže potichu. `CASCADE` jen tam, kde to zadavatel výslovně chce.
+
+**Související:** Má mít vlastník k jedné parcele nejvýš jeden vlastnický vztah (unikátní klíč `(owner_id, parcel_id)` v `ownerships`), nebo jich může mít víc, třeba na různých LV?
