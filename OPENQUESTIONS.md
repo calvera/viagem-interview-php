@@ -121,7 +121,7 @@ Testovací data jsou čistá: žádný řádek neodkazuje na neexistující záz
 
 ## 7. Minimální délka textového filtru „Obec“ ve výpisu vlastníků
 
-**Stav:** otevřená.
+**Stav:** rozhodnuto 26. 11. 2026, varianta b).
 
 **Otázka:** Má textový filtr „Obec“ ve výpisu vlastníků vyžadovat minimální délku zadaného textu (např. 2 nebo 3 znaky)?
 
@@ -145,3 +145,5 @@ Běžné části názvu obce jsou s indexem 4× až 16× levnější (podle str�
 **Doporučení:** a), dokud se na produkci neukáže, že uživatelé jednopísmenný filtr opravdu zadávají (ověřit v logu přístupů parametr `f_municipality`). Jinak b).
 
 **Souvislosti:** `TODO.md`, položky *Filtr obce ve výpisu vlastníků: textové pole* a *Index na `owners.municipality_id`*; `MIGRATION.md`, 5.3.
+
+**Výsledek:** varianta b), minimální délka 2 znaky jako u našeptávače. Kratší text se ignoruje, výpis se ukáže bez textového filtru obce a u pole je upozornění. Viz položka *Filtr obce ve výpisu vlastníků: minimální délka textu* v `TODO.md`.
