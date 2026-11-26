@@ -1,0 +1,28 @@
+{
+    "name": "calvera/legacy-app",
+    "type": "project",
+    "require-dev": {
+        "phpstan/phpstan": "^2.3",
+        "phpstan/extension-installer": "^1.4",
+        "phpunit/phpunit": "^9.6",
+        "phpstan/phpstan-phpunit": "^2.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Calvera\\LegacyApp\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        },
+        "platform": {
+            "php": "7.4.33"
+        }
+    },
+    "require": {
+        "php": ">=7.4"
+    },
+    "version": "2.7.3",
+    "time": "2026-10-27"
+}
