@@ -244,14 +244,16 @@ class PagesTest extends TestCase
   }
 
   /**
-   * Link "vlastníci" in the municipalities list filters by municipality id (Lhota, code 500040, has id 1).
+   * Links "vlastníci" and "parcely" in the municipalities list filter by municipality id (Lhota, code 500040, has id 1)
+   * and look like small buttons.
    */
   public function testMunicipalityOwnersLinkById()
   {
     $response = $this->get('/index.php?url=municipalities&search=500040');
 
     $this->assertSame(200, $response['status']);
-    $this->assertStringContainsString('<a href="index.php?url=owners&amp;f_municipality_id=1">vlastníci</a>', $response['body']);
+    $this->assertStringContainsString('<span class="buttons"><a href="index.php?url=owners&amp;f_municipality_id=1" class="button small">vlastníci</a> '
+      . '<a href="index.php?url=parcels&amp;f_municipality_id=1" class="button small">parcely</a></span>', $response['body']);
     $this->assertStringNotContainsString('f_municipality=', $response['body']);
   }
 
@@ -415,6 +417,52 @@ class PagesTest extends TestCase
   }
 
   /**
+   * Parcels by municipality id (link "parcely" from the municipalities list): the count equals `select count(*)
+   * from parcels where municipality_id = ?` (and the "Parcel" column, 128 for every municipality), with the label,
+   * the remove link keeping the other filters, the value as a hidden input and an empty text field.
+   *
+   * @dataProvider parcelsByIdProvider
+   */
+  public function testParcelsByMunicipalityId($query, $id, $name, $remove, $count)
+  {
+    $response = $this->get('/index.php?url=parcels&f_municipality_id=' . $id . $query);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>' . $count . '</b> parcel', $response['body']);
+    $this->assertStringContainsString('<span class="hidden_filter">Obec: <b>' . $name . '</b> <a href="' . $remove . '" title="zrušit">×</a></span> '
+      . '<input type="hidden" name="f_municipality_id" value="' . $id . '">', $response['body']);
+    $this->assertStringContainsString('name="f_municipality" value=""', $response['body']);
+    if ($count) $this->assertSame(array($name), array_values(array_unique($this->firstColumn($response['body']))));
+  }
+
+  public function parcelsByIdProvider()
+  {
+    return array(
+      'Lhota' => array('', 1, 'Lhota', 'index.php?url=parcels', 128),
+      'Zadní Ves v Údolí' => array('', 2018, 'Zadní Ves v Údolí', 'index.php?url=parcels', 128),
+      'Velká Lhota na Rovni, page 3' => array('&page=3', 5256, 'Velká Lhota na Rovni', 'index.php?url=parcels', 128),
+      'Lhota, arable land' => array('&f_land_type=orn%C3%A1%20p%C5%AFda', 1, 'Lhota', 'index.php?url=parcels&amp;f_land_type=orn%C3%A1+p%C5%AFda', 18),
+      'nonexistent id' => array('', 999999, '999999', 'index.php?url=parcels', 0),
+    );
+  }
+
+  /**
+   * An id that is not just digits is ignored in the parcels list: all parcels, no label.
+   *
+   * @dataProvider invalidIdProvider
+   */
+  public function testInvalidMunicipalityIdIsIgnoredInParcels($value)
+  {
+    $response = $this->get('/index.php?url=parcels&f_municipality_id=' . $value);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>800 000</b> parcel', $response['body']);
+    $this->assertStringNotContainsString('hidden_filter', $response['body']);
+  }
+
+  /**
    * Notes are deleted only by POST; a GET with delete_note is ignored.
    * A nonexistent note id, so nothing is deleted even if this check fails.
    */
@@ -446,6 +494,17 @@ class PagesTest extends TestCase
       'type' => (string)curl_getinfo($ch, CURLINFO_CONTENT_TYPE),
       'body' => $body,
     );
+  }
+
+  /**
+   * Text of the first cell of every row in the list table.
+   */
+  private function firstColumn($body)
+  {
+    preg_match_all('~<tr><td class="[^"]*">([^<]*)</td>~u', $body, $m);
+    $this->assertNotEmpty($m[1]);
+
+    return $m[1];
   }
 
   private function assertNoPhpError($body)

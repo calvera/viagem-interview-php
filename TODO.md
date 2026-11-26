@@ -103,3 +103,4 @@ Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené (`php -l
 ### Ostatní
 
 - [x] Přidat testy (zatím žádné nejsou) – viz úkol 0 v zadání.
+- [x] Výpis obcí: vedle odkazu „vlastníci“ odkaz „parcely“ na výpis parcel obce podle id (`f_municipality_id`, skrytý filtr `p.municipality_id = {value}` přes `Section::addHiddenFilter()` v `admin_parcels_main.php`, popisek „Obec: název ×“). Oba odkazy vypadají jako malá tlačítka (`a.button.small`). Textový filtr „Obec“ ve výpisu parcel (podřetězec) se nemění. Požadavek zadavatele. (v2.8.0, 2026-11-26)

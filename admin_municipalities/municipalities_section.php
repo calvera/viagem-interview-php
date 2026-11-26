@@ -2,7 +2,9 @@
 
 function municipalities_row($r, $section)
 {
-  $r['owners_link'] = '<a href="index.php?url=owners&amp;f_municipality_id=' . (int)$r['id'] . '">vlastníci</a>';
+  $id = (int)$r['id'];
+  $r['owners_link'] = '<span class="buttons"><a href="index.php?url=owners&amp;f_municipality_id=' . $id . '" class="button small">vlastníci</a> '
+    . '<a href="index.php?url=parcels&amp;f_municipality_id=' . $id . '" class="button small">parcely</a></span>';
 
   return $r;
 }

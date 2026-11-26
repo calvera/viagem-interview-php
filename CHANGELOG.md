@@ -4,6 +4,14 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.8.0] – 2026-11-26
+
+### Přidáno
+
+- Výpis obcí: vedle odkazu „vlastníci“ odkaz „parcely“ na výpis parcel obce podle id (`f_municipality_id=<id>`). Výpis parcel má skrytý filtr `p.municipality_id = {value}` (`Section::addHiddenFilter()`, stejně jako výpis vlastníků): nad formulářem popisek „Obec: <b>název</b> ×“, × filtr zruší a vrátí výpis na 1. stranu, druh pozemku a hledání ho zachovají, neplatné id se ignoruje. Počet parcel se rovná sloupci „Parcel“ ve výpisu obcí. Dotazy používají index `idx_parcels_municipality`, stránka má 6 SQL dotazů. Textové pole „Obec“ dál hledá podřetězec.
+- Odkazy „vlastníci“ a „parcely“ ve výpisu obcí vypadají jako malá tlačítka (nová třída `a.button.small` v `css/style.css`, oba odkazy v jednom řádku), zůstávají odkazy `<a>`.
+- Smoke testy odkazu „parcely“, výpisu parcel podle id obce (počet, popisek, zachování druhu pozemku, neexistující id) a ignorování neplatného id; Playwright test odkazu z obcí na parcely (popisek, počet rovný sloupci „Parcel“, řádky jen z obce, zachování při dalším filtru, ×).
+
 ## [2.7.11] – 2026-11-26
 
 ### Změněno

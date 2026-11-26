@@ -60,6 +60,7 @@ $section->addCol('Druh pozemku', 14, 'land_type', 'string', false);
 $section->addCol('Výměra', 9, 'p.area_m2', 'area');
 $section->addCol('Vlastníci', 25, 'owners_html', 'html', false);
 
+$section->addHiddenFilter('municipality_id', 'Obec', 'p.municipality_id = {value}', 'select name from municipalities where id = {value}');
 $section->addFilter('municipality', 'Obec', 'autocomplete', "m.name like concat('%', {value}, '%')");
 $section->addFilter('land_type', 'Druh', 'select', 'p.land_type = {value}', $land_types);
 $section->setSearch(array('p.parcel_number', 'p.cadastral_code'), get_param('search'));

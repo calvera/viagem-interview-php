@@ -124,6 +124,15 @@ a.button.export {
   border-color: #33783f;
 }
 
+a.button.small {
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+span.buttons {
+  white-space: nowrap;
+}
+
 a.reset {
   font-size: 12px;
 }
