@@ -2,19 +2,27 @@
 
 $page_title = 'Parcely';
 
+/**
+ * Loads the owners of all parcels on the page in one query instead of per row.
+ */
+function parcels_list_prepare($rows, $section)
+{
+  $owners = parcels_owners(array_column($rows, 'id'));
+
+  foreach ($rows as $i => $r)
+  {
+    $id = (int)$r['id'];
+    $rows[$i]['_owners'] = isset($owners[$id]) ? $owners[$id] : array();
+  }
+
+  return $rows;
+}
+
 function parcels_row($r, $section)
 {
-  global $db;
-
-  $owners = $db->queryResult("select o.id, o.type, o.title, o.first_name, o.last_name, os.share_num, os.share_den, os.lv_number
-    from ownerships os
-    left join owners o on o.id = os.owner_id
-    where os.parcel_id = " . $r['id'] . "
-    order by o.last_name");
-
   $links = array();
   $lv = array();
-  foreach ($owners as $o)
+  foreach ($r['_owners'] as $o)
   {
     $links[] = '<a href="index.php?url=owners/detail&amp;id=' . $o['id'] . '">' . h(owner_name($o)) . '</a> <small>(' . format_share($o['share_num'], $o['share_den']) . ')</small>';
     $lv[(string)$o['lv_number']] = $o['lv_number'];
@@ -57,6 +65,7 @@ $section->addFilter('land_type', 'Druh', 'select', 'p.land_type = {value}', $lan
 $section->setSearch(array('p.parcel_number', 'p.cadastral_code'), get_param('search'));
 
 $section->setSortBy('p.id', 'asc');
+$section->setRowsPrepareFunction('parcels_list_prepare');
 $section->setRowShowFunction('parcels_row');
 
 ?>

@@ -256,6 +256,71 @@ class PagesTest extends TestCase
   }
 
   /**
+   * Owners and LV numbers of a parcel on the default first page (sorted by id): a wrong mapping of the batch-loaded
+   * owners to parcels would show other owners. Parcel 15 has owners with different last names, so their order is fixed.
+   * Values from the database (`ownerships where parcel_id = 15`), same as in v2.7.9.
+   */
+  public function testParcelOwners()
+  {
+    $owner = function ($id, $name, $share) {
+      return '<a href="index.php?url=owners/detail&amp;id=' . $id . '">' . $name . '</a> <small>(' . $share . ')</small>';
+    };
+    $owners = implode('<br>', array(
+      $owner(12705, 'Markéta Benešová', 'celý'),
+      $owner(132487, 'Hana Horáková', '1/4'),
+      $owner(412705, 'Jaroslava Kratochvílová', '1/2'),
+      $owner(312705, 'Ing. Markéta Šimková', '1/4'),
+      $owner(332487, 'MUDr. Martina Zemanová', 'celý'),
+    ));
+
+    $response = $this->get('/index.php?url=parcels');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('<tr><td class="col_string">Velká Lhota na Rovni</td><td class="col_string">Velká Lhota na Rovni</td>'
+      . '<td class="col_string">106</td><td class="col_string">2209, 2423</td><td class="col_string">Lesní pozemek</td>'
+      . '<td class="col_area">2,89 ha</td><td class="col_html">' . $owners . '</td></tr>', $response['body']);
+  }
+
+  /**
+   * Parcel 1 (first row of the default page) has no owner.
+   */
+  public function testParcelWithoutOwner()
+  {
+    $response = $this->get('/index.php?url=parcels');
+
+    $this->assertStringContainsString('<tbody><tr><td class="col_string">Zadní Ves v Údolí</td><td class="col_string">Zadní Ves v Údolí</td>'
+      . '<td class="col_string">8</td><td class="col_string"></td><td class="col_string">Orná půda</td><td class="col_area">8 069 m²</td>'
+      . '<td class="col_html"><span class="muted">bez vlastníka</span></td></tr>', $response['body']);
+  }
+
+  /**
+   * Parcel count of a municipality, equal to `select count(*) from parcels where municipality_id = ?` (128 for
+   * every municipality in the generated data; a wrong correlation of the subquery gives 0).
+   *
+   * @dataProvider municipalityParcelsProvider
+   */
+  public function testMunicipalityParcelCount($code, $name, $district, $region, $parcels)
+  {
+    $response = $this->get('/index.php?url=municipalities&search=' . $code);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>1</b> obcí', $response['body']);
+    $this->assertStringContainsString('<tr><td class="col_string">' . $code . '</td><td class="col_string">' . $name . '</td>'
+      . '<td class="col_string">' . $district . '</td><td class="col_string">' . $region . '</td><td class="col_int">' . $parcels . '</td>',
+      $response['body']);
+  }
+
+  public function municipalityParcelsProvider()
+  {
+    return array(
+      'Zadní Ves v Údolí (id 2018)' => array('574669', 'Zadní Ves v Údolí', 'Rybnicko', 'Západní kraj', 128),
+      'Velká Lhota na Rovni (id 5256)' => array('694475', 'Velká Lhota na Rovni', 'Jesenicko nad Tichou', 'Horský kraj', 128),
+    );
+  }
+
+  /**
    * Notes are deleted only by POST; a GET with delete_note is ignored.
    * A nonexistent note id, so nothing is deleted even if this check fails.
    */

@@ -4,12 +4,25 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.10] – 2026-11-26
+
+### Změněno
+
+- Výpis parcel: vlastníci všech parcel stránky se načtou jedním dotazem `in (…)` místo dotazu na každý řádek (`parcels_list_prepare()`, nová `parcels_owners()` v `includes/functions.php`). Stránka má 5 SQL dotazů místo 54.
+- Výpis obcí: počet parcel je korelovaný poddotaz v hlavním dotazu výpisu místo dotazu na každý řádek; MariaDB ho vyhodnotí jen pro řádky stránky. Stránka má 5 SQL dotazů místo 55. Porovnání s dávkovým dotazem a s `left join … group by` (přečtené řádky) je v README.
+- HTML obou výpisů je stejné jako dříve (porovnáno na PHP 7.4 i 8.5), u parcel až na pořadí vlastníků se stejným příjmením, které bylo neurčené už dříve. Nový index není potřeba.
+
+### Přidáno
+
+- Smoke testy vlastníků a LV konkrétní parcely, parcely bez vlastníka a počtu parcel konkrétní obce; unit test `parcels_owners()` při chybě SQL.
+- `TODO.md`: neurčené pořadí vlastníků se stejným příjmením ve výpisu parcel (*Chyby v logice*).
+
 ## [2.7.9] – 2026-11-26
 
 ### Změněno
 
 - Výpis vlastníků: název obce, počet parcel a s filtrem obce i parcely pro sloupec „V obci“ se načtou jednou za stránku dotazem `in (…)` místo dotazu na každý řádek (`Section::setRowsPrepareFunction()`, `owners_list_prepare()`). Stránka má 5 SQL dotazů místo 103, s filtrem obce 6 místo 153. „V obci“ se dál filtruje v PHP stejným `mb_stripos`, HTML výpisu je stejné jako dříve (ověřeno porovnáním na PHP 7.4 i 8.5).
-- `owner_parcel_count()` a `owner_parcels_in_municipality()` nahradily `owners_parcel_counts()`, `owners_parcels()` a `parcels_in_municipality()`; přibyly `municipality_names()` a `sql_int_list()`.
+- `owners_parcel_counts()`, `owners_parcels()` a `parcels_in_municipality()` nahradily `owner_parcel_count()` a `owner_parcels_in_municipality()`; přibyly `municipality_names()` a `sql_int_list()`.
 
 ### Přidáno
 

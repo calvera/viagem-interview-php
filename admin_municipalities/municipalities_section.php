@@ -2,9 +2,6 @@
 
 function municipalities_row($r, $section)
 {
-  global $db;
-
-  $r['parcels'] = $db->queryValue("select count(*) from parcels where municipality_id = " . $r['id']);
   $r['owners_link'] = '<a href="index.php?url=owners&amp;f_municipality=' . urlencode($r['name']) . '">vlastníci</a>';
 
   return $r;
@@ -28,6 +25,10 @@ $section = new Section('municipalities');
 $section->setItemName('obcí');
 $section->setTable('municipalities');
 $section->setTableId('id');
+
+// Correlated subquery: MariaDB runs it only for the rows of the page (after sort and limit).
+$section->addSelect('municipalities.*');
+$section->addSelect('(select count(*) from parcels p where p.municipality_id = municipalities.id) as parcels');
 
 $section->addCol('Kód', 8, 'code');
 $section->addCol('Název', 30, 'name');

@@ -266,6 +266,27 @@ function owners_parcels($owner_ids)
 }
 
 /**
+ * Owners of the parcels with share and LV number, grouped by parcel id, in one query.
+ * Each parcel's owners are ordered by last name, as in the parcels list before.
+ */
+function parcels_owners($parcel_ids)
+{
+  global $db;
+
+  $list = array();
+  $res = $db->query("select os.parcel_id, o.id, o.type, o.title, o.first_name, o.last_name, os.share_num, os.share_den, os.lv_number
+    from ownerships os
+    left join owners o on o.id = os.owner_id
+    where os.parcel_id in (" . sql_int_list($parcel_ids) . ")
+    order by os.parcel_id, o.last_name");
+  if (!$res) return $list;
+
+  while ($r = $res->fetch_assoc()) $list[$r['parcel_id']][] = $r;
+
+  return $list;
+}
+
+/**
  * Count and share area of the parcels whose municipality name contains $municipality (case-insensitive).
  */
 function parcels_in_municipality($parcels, $municipality)

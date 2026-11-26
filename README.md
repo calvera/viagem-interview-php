@@ -56,7 +56,7 @@ Kontrola „žádná PHP chyba“ hledá na stránce výpis fatální chyby a ch
 | Sada | Co ověřuje |
 | --- | --- |
 | `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování, ošetření buněk CSV proti vzorcům, parametry GET/POST, CSRF token…), skládání SQL v `Database::getWhere()`, parametry filtrů a hledání v `Section` (hodnota nikdy není v textu SQL) a formátování buněk výpisu s `NULL`. Bez databáze. |
-| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, obec a počet parcel ve výpisu vlastníků (i vlastník bez parcel) a hodnoty „V obci“ s filtrem obce, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
+| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, obec a počet parcel ve výpisu vlastníků (i vlastník bez parcel) a hodnoty „V obci“ s filtrem obce, vlastníci a LV konkrétní parcely (i parcela bez vlastníka) a počet parcel konkrétní obce, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
 | Playwright (`e2e/`) | Totéž v prohlížeči (Chromium) a navíc JavaScript a klikání: menu, filtry, řazení, stránkování, našeptávač obcí (popisek se vloží jako text, ne HTML), potvrzovací dialog mazání poznámky (vždy se zruší), stažení CSV. Po každém testu ověří, že v konzoli prohlížeče není chyba a na stránce není výpis fatální chyby ani chyby syntaxe. Test mazání poznámky navíc v prohlížeči zablokuje každý POST, takže poznámku nesmaže, ani kdyby potvrzovací dialog nefungoval. |
 
 Nejdřív spusťte aplikaci (`docker compose up -d`, viz výše) a migraci indexu (viz *Zrychlení výpisu vlastníků*). Smoke sada trvá asi 20 s na verzi, Playwright asi půl minuty pro obě verze.
@@ -86,7 +86,7 @@ APP_URL=http://localhost:8085 vendor/bin/phpunit --testsuite smoke
 cd e2e && npx playwright test --project=php85
 ```
 
-Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 122, smoke 44, Playwright 19 testů na každou verzi).
+Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 122, smoke 48, Playwright 19 testů na každou verzi).
 
 Skripty `composer test` a `composer test:smoke` spouští PHPUnit pod PHP hostitele (v image `php74` Composer není). Pro unit testy na PHP 7.4 proto použijte příkaz s `docker compose run` výše.
 
@@ -185,7 +185,69 @@ explain … left join municipalities m … where m.name like '%Lhota%' …;   o:
 - **Výchozí řazení** podle `concat(…)` nemůže použít index, každá strana řadí všech 500 tisíc vlastníků. Změna řazení ale změní, kteří vlastníci jsou na které straně: 500 tis. vlastníků má jen 1 070 různých jmen a pořadí uvnitř jména je neurčené. Proto zůstává beze změny jako otázka 5 v [OPENQUESTIONS.md](OPENQUESTIONS.md).
 - **`count(*)`** je jeden průchod indexem za stránku a výpis ukazuje přesný počet, proto beze změny.
 - **Filtr obce** hledá podřetězec přes všechny vlastníky (`ALL`). Index na `owners.municipality_id` záměrně není: změní plán dotazu a výpis „Lhota“ pak na 1. straně ukáže jiné vlastníky se stejným jménem (ověřeno dočasným indexem). Filtr je samostatná položka v TODO (*Výkon*) a otázka 1 v OPENQUESTIONS.
-- N+1 ve výpisu parcel a obcí jsou samostatné položky v TODO.
+- N+1 ve výpisu parcel a obcí: viz *Výpis parcel a obcí* níže.
+
+### Výpis parcel a obcí
+
+Stejný postup jako u vlastníků: počet SQL dotazů z patičky a `EXPLAIN` / `ANALYZE`, doba stránky se neměřila.
+
+#### Příčina: N+1 dotazy, plány jsou v pořádku
+
+Výpis parcel načítal vlastníky každé parcely (`parcels_row()`), výpis obcí počet parcel každé obce (`municipalities_row()`), tedy 50 dotazů na stránku navíc. Samotné dotazy jsou levné, problém je jejich počet:
+
+```
+explain select o.id, … from ownerships os left join owners o on o.id = os.owner_id where os.parcel_id = 15 order by o.last_name;
+os: type=ref  key=idx_ownerships_parcel  rows=1   o: eq_ref PRIMARY
+explain select count(*) from parcels where municipality_id = 1;
+type=ref  key=idx_parcels_municipality  rows=128  Using index   (ANALYZE: r_rows=128)
+```
+
+#### Oprava
+
+- **Parcely:** `parcels_list_prepare()` (`Section::setRowsPrepareFunction()`) načte vlastníky všech parcel stránky jedním dotazem `parcels_owners()` (`where os.parcel_id in (…) order by os.parcel_id, o.last_name`). Každá parcela má vlastníky ve stejném pořadí jako dříve, kromě vlastníků se stejným příjmením, jejichž pořadí (a s ním pořadí čísel LV) bylo neurčené už dříve (viz *Chyby v logice* v TODO). HTML buňky dál skládá PHP (`owner_name()`, `h()`, `format_share()`).
+- **Obce:** počet parcel je korelovaný poddotaz v hlavním dotazu výpisu: `(select count(*) from parcels p where p.municipality_id = municipalities.id) as parcels`. MariaDB ho vyhodnotí jen pro řádky stránky (po řazení a `limit`), ne pro všech 6 250 obcí.
+- Nový index není potřeba: dávkový dotaz i poddotaz používají existující indexy `idx_ownerships_parcel` a `idx_parcels_municipality`.
+
+#### Před a po
+
+| Stránka | SQL dotazů před | po |
+| --- | --- | --- |
+| výpis parcel (i filtr druhu a obce, hledání, řazení, další strany) | 54 | 5 |
+| výpis obcí (i filtr okresu a kraje, hledání, řazení, další strany) | 55 | 5 |
+
+Poslední strana obcí s filtrem kraje (38 řádků) měla 43 dotazů, teď 5. Po opravě jsou na stránce parcel: `access_log`, druhy pozemků do filtru, `count(*)`, řádky stránky, vlastníci; na stránce obcí: `access_log`, okresy, kraje, `count(*)`, řádky stránky s počty parcel.
+
+```
+explain select os.parcel_id, o.id, … from ownerships os left join owners o … where os.parcel_id in (…50 id…) order by os.parcel_id, o.last_name;
+os: type=range  key=idx_ownerships_parcel  rows=93  Using index condition; Using temporary; Using filesort   (ANALYZE: r_rows=73)
+o:  type=eq_ref key=PRIMARY
+
+analyze select municipalities.*, (select count(*) from parcels p where p.municipality_id = municipalities.id) as parcels
+  from municipalities order by name limit 6200, 50;
+municipalities: type=ALL  r_rows=6250  Using filesort         (stejně jako hlavní dotaz dříve)
+p (DEPENDENT SUBQUERY): type=ref  key=idx_parcels_municipality  r_loops=50  r_rows=128  Using index
+```
+
+#### Proč u obcí poddotaz a ne dávka nebo join
+
+Porovnáno `ANALYZE FORMAT=JSON` pro stranu 1, 63 a 125, s výchozím řazením podle názvu i podle okresu (čísla jsou na všech stranách a u obou řazení stejná):
+
+| Varianta | Dotazů | Přečtené řádky na stránku |
+| --- | --- | --- |
+| (a) dávka `select municipality_id, count(*) from parcels where municipality_id in (…) group by municipality_id` | 2 | 6 250 (obce) + 6 400 z indexu (`range`) |
+| (b) korelovaný poddotaz v hlavním dotazu | 1 | 6 250 (obce) + 50 × 128 = 6 400 z indexu (`ref`, `r_loops=50`) |
+| (c) `left join parcels … group by m.id` v hlavním dotazu | 1 | 6 250 (obce) + 6 250 × 128 = 800 000 z indexu (`r_loops=6250`) |
+
+- (b) čte stejně jako (a), o dotaz méně a bez pomocné funkce. Poddotaz se vyhodnotí jen pro vypsané řádky i s filtrem (poslední strana „Západní kraj“: `r_loops=38`).
+- (c) spočítá parcely všech obcí před řazením a `limit`. Navíc `Section::getCount()` skládá `count(*)` ze stejné tabulky a joinů bez `group by`, takže by výpis ukázal 800 000 místo 6 250 obcí a stránkování by nesedělo.
+- U parcel join nejde: parcela má až 17 vlastníků, join dá 1 547 245 řádků místo 800 000 a rozbije `count(*)` i `limit`. `group_concat` by přesunul skládání HTML (`owner_name()`, escapování) do SQL a výstup by nebyl stejný. Proto dávka.
+
+#### Chování se nezměnilo
+
+Část výpisu (informace o počtu, tabulka, stránkování) se uložila před změnou (dvakrát) a po ní, na PHP 7.4 i 8.5. Parcely: výchozí výpis, druh „orná půda“, filtr obce „Lhota“ (i 2. strana), hledání „st. 121“, řazení podle katastrálního území a výměry v obou směrech, 2. a poslední strana. Obce: výchozí výpis, okres, kraj (i poslední strana), hledání, řazení podle kódu, názvu, okresu a kraje, 2. a poslední strana.
+
+- **Obce:** bajtově shodné.
+- **Parcely:** shodné po seřazení vlastníků uvnitř buňky „Vlastníci“ a čísel v buňce „LV“. Pořadí vlastníků se stejným příjmením je neurčené už před změnou: dvě načtení stejné adresy před změnou se lišila (parcela 19020, tři vlastníci „Kratochvíl“ v jiném pořadí). Chyba je zapsaná v TODO (*Chyby v logice*), v této položce se neopravuje.
 
 ## Struktura
 

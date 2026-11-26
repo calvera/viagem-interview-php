@@ -180,7 +180,7 @@ class FunctionsTest extends TestCase
   }
 
   /**
-   * Failed query: the batch lookups of the owners list return an empty map.
+   * Failed query: the batch lookups of the owners and parcels lists return an empty map.
    */
   public function testBatchLookupsWithFailedQueryReturnEmpty()
   {
@@ -196,6 +196,7 @@ class FunctionsTest extends TestCase
     $this->assertSame(array(), municipality_names(array(1, 2)));
     $this->assertSame(array(), owners_parcel_counts(array(1, 2)));
     $this->assertSame(array(), owners_parcels(array(1, 2)));
+    $this->assertSame(array(), parcels_owners(array(1, 2)));
   }
 
   public function testSqlIntListCastsAndDeduplicates()
