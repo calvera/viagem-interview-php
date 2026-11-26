@@ -1,0 +1,16 @@
+# Statická analýza kódu aplikace jako PHP 7.4.
+# Tentýž kód jako PHP 8.5: vendor/bin/phpstan analyse -c phpstan-php85.neon
+# Baseline obsahuje jen proměnné ($db, $menu…) z includovaných šablon, které PHPStan nevidí.
+includes:
+	- phpstan-baseline.neon
+parameters:
+	level: 2
+	phpVersion: 70400
+	paths:
+		- .
+	excludePaths:
+		- vendor
+		- e2e
+		- tests
+	bootstrapFiles:
+		- tests/phpstan-bootstrap.php

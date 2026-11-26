@@ -10,6 +10,21 @@ class Section
   public $search_items = array();
   public $sql_where = array();
   public $sql_join = array();
+  public $db;
+  public $item_name;
+  public $limit;
+  public $select_items;
+  public $row_function;
+  public $detail_url;
+  public $export_url;
+  public $search_value;
+  public $sort;
+  public $sort_dir;
+  public $default_sort;
+  public $default_sort_dir;
+  public $page;
+  public $total;
+  public $pages;
 
   function __construct($name = null)
   {
@@ -54,7 +69,7 @@ class Section
     $col['width'] = $width;
     $col['sort'] = $sort;
     $col['type'] = $type;
-    $col['sortable'] = (boolean)$sortable;
+    $col['sortable'] = (bool)$sortable;
 
     $this->cols[$sort] = $col;
   }
@@ -75,7 +90,7 @@ class Section
     $filter['type'] = $type;
     $filter['sql'] = $sql;
     $filter['options'] = $options;
-    $filter['value'] = trim(get_param('f_' . $id));
+    $filter['value'] = trim((string)get_param('f_' . $id));
 
     $this->filters[$id] = $filter;
   }
@@ -94,7 +109,7 @@ class Section
   function setSearch($items, $value)
   {
     $this->search_items = $items;
-    $this->search_value = trim($value);
+    $this->search_value = trim((string)$value);
   }
 
   function setSortBy($sort, $dir = 'asc')
@@ -148,7 +163,7 @@ class Section
   function getOrder()
   {
     $sort = get_param('sort');
-    $dir = strtolower(get_param('dir')) == 'desc' ? 'desc' : 'asc';
+    $dir = strtolower((string)get_param('dir')) == 'desc' ? 'desc' : 'asc';
 
     if ($sort && isset($this->cols[$sort]) && $this->cols[$sort]['sortable'])
     {

@@ -1,0 +1,5 @@
+# Stejná analýza jako phpstan.neon, ale jako PHP 8.5.
+includes:
+	- phpstan.neon
+parameters:
+	phpVersion: 80500

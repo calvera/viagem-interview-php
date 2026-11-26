@@ -16,14 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST')
 {
   $in = array();
   $in['id'] = $id;
-  $in['title'] = trim(post_param('title'));
-  $in['first_name'] = trim(post_param('first_name'));
-  $in['last_name'] = trim(post_param('last_name'));
-  $in['street'] = trim(post_param('street'));
-  $in['zip'] = str_replace(' ', '', post_param('zip'));
-  $in['city'] = trim(post_param('city'));
-  $in['phone'] = trim(post_param('phone'));
-  $in['email'] = trim(post_param('email'));
+  $in['title'] = trim((string)post_param('title'));
+  $in['first_name'] = trim((string)post_param('first_name'));
+  $in['last_name'] = trim((string)post_param('last_name'));
+  $in['street'] = trim((string)post_param('street'));
+  $in['zip'] = str_replace(' ', '', (string)post_param('zip'));
+  $in['city'] = trim((string)post_param('city'));
+  $in['phone'] = trim((string)post_param('phone'));
+  $in['email'] = trim((string)post_param('email'));
   $in['duedate'] = post_param('duedate');
   $in['do_not_contact'] = post_param('do_not_contact') ? '1' : '0';
   $in['note'] = post_param('note');
@@ -78,7 +78,7 @@ $page_title = 'Úprava – ' . owner_name($owner);
     </td></tr>
     <tr><th>Telefon</th><td><input type="text" name="phone" value="<?php echo h($owner['phone']) ?>"></td></tr>
     <tr><th>E-mail</th><td><input type="text" name="email" value="<?php echo h($owner['email']) ?>" size="40"></td></tr>
-    <tr><th>Termín oslovení</th><td><input type="date" name="duedate" value="<?php echo $owner['duedate'] == 0 ? '' : h($owner['duedate']) ?>"></td></tr>
+    <tr><th>Termín oslovení</th><td><input type="date" name="duedate" value="<?php echo (int)$owner['duedate'] == 0 ? '' : h($owner['duedate']) ?>"></td></tr>
     <tr><th>Neoslovovat</th><td>
       <label><input type="checkbox" name="do_not_contact" value="1"<?php if ($owner['do_not_contact'] === '1') echo ' checked' ?>> vlastník si nepřeje být kontaktován</label>
     </td></tr>

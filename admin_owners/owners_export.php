@@ -8,7 +8,7 @@ $section->setLimit(EXPORT_LIMIT);
 $rows = $section->getRows(false);
 if (!$rows) $rows = array();
 
-$filename = 'vlastnici_' . strftime('%Y%m%d_%H%M') . '.csv';
+$filename = 'vlastnici_' . date('Ymd_Hi') . '.csv';
 
 while (ob_get_level()) ob_end_clean();
 
@@ -19,11 +19,11 @@ header('Cache-Control: no-cache');
 $out = fopen('php://output', 'w');
 
 fwrite($out, "\xEF\xBB\xBF");
-fputcsv($out, array('Export vlastníků', strftime('%d.%m.%Y %H:%M'), $_SESSION['user']), ';');
+fputcsv($out, array('Export vlastníků', date('d.m.Y H:i'), $_SESSION['user']), ';', '"', '\\');
 
 $head = array('ID', 'Typ', 'Titul', 'Jméno', 'Příjmení / název', 'Datum narození', 'IČO', 'Ulice', 'PSČ', 'Město',
   'Obec (KN)', 'Telefon', 'E-mail', 'Termín oslovení', 'Založeno');
-fputcsv($out, $head, ';');
+fputcsv($out, $head, ';', '"', '\\');
 
 $skipped = 0;
 $exported = 0;
@@ -36,7 +36,7 @@ foreach ($rows as $r)
     continue;
   }
 
-  if ($r['duedate'] == 0) $duedate = '';
+  if ((int)$r['duedate'] == 0) $duedate = '';
   else $duedate = date('d.m.Y', strtotime($r['duedate']));
 
   $line = array(
@@ -57,14 +57,14 @@ foreach ($rows as $r)
     date('d.m.Y H:i', strtotime($r['created_at'])),
   );
 
-  fputcsv($out, $line, ';');
+  fputcsv($out, $line, ';', '"', '\\');
   $exported++;
 }
 
 if ($skipped)
 {
-  fputcsv($out, array(), ';');
-  fputcsv($out, array('Vynecháno ' . $skipped . ' vlastníků se zákazem oslovení.'), ';');
+  fputcsv($out, array(), ';', '"', '\\');
+  fputcsv($out, array('Vynecháno ' . $skipped . ' vlastníků se zákazem oslovení.'), ';', '"', '\\');
 }
 
 fclose($out);

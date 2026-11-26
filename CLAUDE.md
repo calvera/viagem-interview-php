@@ -1,20 +1,25 @@
-# Project rules
+# Pravidla projektu
 
-## Workflow for work items
+Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `CHANGELOG.md`, `MIGRATION.md`, `CLAUDE.md`) se píší česky.
 
-Each work item (one TODO entry or one coherent change) goes through this loop:
+## Postup u pracovních položek
 
-1. **Build**: delegate to an `opus-builder` agent. The builder:
-   - makes the code changes,
-   - checks off or updates the entry in `TODO.md`,
-   - adds an entry under `## [Nevydáno]` in `CHANGELOG.md`.
-2. **Review**: run a read-only review with a Fable agent (`sonnet-checker` with `model: fable`). It only reads the diff and the code: it runs no tests and changes nothing. Running tests is the builder's job.
-3. **Repeat**: if the review is not clean, send its findings back to the same builder (SendMessage) and review again. A work item is done only when the review comes back clean.
-4. **Release**: once the review is clean, the work item gets its own version:
-   - bump `version` in `composer.json` (semver: bug fix or compatibility fix → patch, new feature → minor, breaking change → major) and set `time` to the release date (`YYYY-MM-DD`),
-   - set `APP_VERSION` in `includes/config.php` to the same version,
-   - in `TODO.md`, append the version and date to the checked-off item: `(vx.y.z, YYYY-MM-DD)`,
-   - in `CHANGELOG.md`, rename `## [Nevydáno]` to `## [x.y.z] – YYYY-MM-DD` and start a new empty `## [Nevydáno]` above it,
-   - commit the work item, then tag the commit `vx.y.z`.
+Každá pracovní položka (jeden úkol z `TODO.md` nebo jedna ucelená změna) projde touto smyčkou:
 
-Docs (`README.md`, `TODO.md`, `CHANGELOG.md`) are written in Czech.
+1. **Stavba**: práci dostane agent `opus-builder`. Ten:
+   - provede změny v kódu a spustí testy,
+   - odškrtne nebo upraví položku v `TODO.md`,
+   - přidá záznam pod `## [Nevydáno]` v `CHANGELOG.md`,
+   - aktualizuje `MIGRATION.md`, pokud se změna týká migrace nebo serveru.
+2. **Review**: read-only review agentem Fable (`sonnet-checker` s `model: fable`). Jen čte diff a kód: nespouští testy a nic nemění. Testy spouští builder.
+3. **Opakování**: pokud review není čisté, jeho nálezy jdou zpět stejnému builderovi (SendMessage) a následuje další review. Položka je hotová, až když je review čisté.
+4. **Vydání**: po čistém review dostane položka vlastní verzi:
+   - zvýšit `version` v `composer.json` (semver: oprava chyby nebo kompatibility → patch, nová funkce → minor, nekompatibilní změna → major) a nastavit `time` na datum vydání (`YYYY-MM-DD`),
+   - nastavit stejnou verzi do `APP_VERSION` v `includes/config.php`,
+   - v `TODO.md` doplnit k odškrtnuté položce verzi a datum: `(vx.y.z, YYYY-MM-DD)`,
+   - v `CHANGELOG.md` přejmenovat `## [Nevydáno]` na `## [x.y.z] – YYYY-MM-DD` a nad něj založit nový prázdný `## [Nevydáno]`,
+   - commitnout položku a commit otagovat `vx.y.z`.
+
+## MIGRATION.md
+
+`MIGRATION.md` popisuje, co jsme při migraci na PHP 8.5 udělali, a co je potřeba přenastavit na produkčním serveru (rozšíření, php.ini, locale, cron, změny v databázi, pořadí nasazení, návrat zpět, ověření). Každá položka, která mění něco důležitého pro server nebo migraci, ho aktualizuje v kroku Stavba a review kontroluje, že je aktuální.

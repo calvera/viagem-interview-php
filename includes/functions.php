@@ -8,14 +8,12 @@ function db_escape($val)
     return $val;
   }
 
-  if (get_magic_quotes_gpc()) $val = stripslashes($val);
-
   return addslashes($val);
 }
 
 function h($s)
 {
-  return @htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+  return @htmlspecialchars($s === null ? '' : $s, ENT_QUOTES, 'UTF-8');
 }
 
 function get_param($name, $default = null)
@@ -48,25 +46,32 @@ function url($params = array(), $keep_current = false)
   return 'index.php?' . h(http_build_query($query));
 }
 
-function match($pattern, $subject, $group = 0)
+function regex_match($pattern, $subject, $group = 0)
 {
-  if (!preg_match($pattern, $subject, $m)) return false;
+  if (!preg_match($pattern, (string)$subject, $m)) return false;
   return isset($m[$group]) ? $m[$group] : false;
 }
 
-function mb_ucFirst($s)
+// PHP 8.4+ has mb_ucfirst() and mb_lcfirst() built in (function names are case-insensitive).
+if (!function_exists('mb_ucfirst'))
 {
-  return mb_strtoupper(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($s, 1, null, 'UTF-8');
+  function mb_ucFirst($s)
+  {
+    return mb_strtoupper(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($s, 1, null, 'UTF-8');
+  }
 }
 
-function mb_lcFirst($s)
+if (!function_exists('mb_lcfirst'))
 {
-  return mb_strtolower(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($s, 1, null, 'UTF-8');
+  function mb_lcFirst($s)
+  {
+    return mb_strtolower(mb_substr($s, 0, 1, 'UTF-8'), 'UTF-8') . mb_substr($s, 1, null, 'UTF-8');
+  }
 }
 
 function is_ico($s)
 {
-  return match('/^\d{8}$/', trim($s)) !== false;
+  return regex_match('/^\d{8}$/', trim($s)) !== false;
 }
 
 function format_date($date, $empty = '–')
@@ -103,13 +108,13 @@ function owner_type_label($type, $lower = false)
 {
   switch ($type)
   {
-    case 'F';
+    case 'F':
       $label = 'Fyzická osoba';
       break;
-    case 'P';
+    case 'P':
       $label = 'Právnická osoba';
       break;
-    default;
+    default:
       $label = 'Neurčeno';
   }
 
@@ -161,7 +166,7 @@ function owner_parcels($owner_id)
 {
   global $db;
 
-  $list = null;
+  $list = array();
 
   $res = $db->query("select os.id as ownership_id, os.share_num, os.share_den, os.lv_number,
       p.id, p.cadastral_area, p.cadastral_code, p.parcel_number, p.area_m2, p.land_type,

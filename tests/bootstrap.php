@@ -2,8 +2,8 @@
 
 /*
  * Common bootstrap for all suites. It loads no application code on purpose:
- * includes/functions.php does not parse on PHP 8 yet (function match()), so
- * only the unit tests load it and the smoke suite runs on any PHP version.
+ * only the unit tests load includes/functions.php, so the smoke suite does not
+ * depend on the application code and runs on any PHP version.
  */
 
 require dirname(__DIR__) . '/vendor/autoload.php';

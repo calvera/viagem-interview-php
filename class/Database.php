@@ -2,6 +2,9 @@
 
 class QueryResult
 {
+  var $stmt;
+  var $num_rows;
+
   function __construct($stmt)
   {
     $this->stmt = $stmt;
@@ -29,15 +32,25 @@ class Database
   var $pdo;
   var $bind_params = array();
   var $query_count = 0;
+  var $connected;
+  var $sql;
+  var $last_id;
+  var $affected_rows;
+  var $last_error;
 
   function connect()
   {
     $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=utf8mb4';
 
+    // PHP 8.5 deprecates PDO::MYSQL_ATTR_INIT_COMMAND, its replacement does not exist in 7.4.
+    $init_command = defined('Pdo\Mysql::ATTR_INIT_COMMAND') ? constant('Pdo\Mysql::ATTR_INIT_COMMAND') : constant('PDO::MYSQL_ATTR_INIT_COMMAND');
+
     $options = array(
-      PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8mb4 COLLATE utf8mb4_czech_ci, SESSION sql_mode = ''",
+      $init_command => "SET NAMES utf8mb4 COLLATE utf8mb4_czech_ci, SESSION sql_mode = ''",
+      PDO::ATTR_ERRMODE => PDO::ERRMODE_SILENT,
       PDO::ATTR_EMULATE_PREPARES => true,
       PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+      PDO::ATTR_STRINGIFY_FETCHES => true,
     );
 
     try

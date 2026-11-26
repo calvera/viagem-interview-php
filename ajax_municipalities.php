@@ -4,7 +4,7 @@ require_once dirname(__FILE__) . '/includes/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
-$q = trim($_GET['q']);
+$q = trim(get_param('q', ''));
 
 if (strlen($q) < 2)
 {

@@ -1,6 +1,6 @@
 <?php
 
-$id = (integer)get_param('id');
+$id = (int)get_param('id');
 
 if (isset($_GET['delete_note']))
 {
@@ -11,7 +11,7 @@ if (isset($_GET['delete_note']))
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && post_param('action') == 'add_note')
 {
-  $note = trim(post_param('note'));
+  $note = trim((string)post_param('note'));
 
   if ($note == '')
   {
@@ -37,7 +37,7 @@ $owner = $db->queryOneResult("select o.*, m.name as municipality_name, m.code as
   left join municipalities m on m.id = o.municipality_id
   where o.id = " . $id);
 
-if (count($owner) == 0)
+if (!$owner)
 {
   $page_title = 'Vlastník nenalezen';
   ?>
@@ -47,7 +47,7 @@ if (count($owner) == 0)
   return;
 }
 
-$owner_name = $owner['type'] == 'P' ? $owner['last_name'] : $owner['first_name'] ? owner_name($owner) : $owner['last_name'];
+$owner_name = ($owner['type'] == 'P' ? $owner['last_name'] : $owner['first_name']) ? owner_name($owner) : $owner['last_name'];
 $page_title = $owner_name;
 
 $parcels = owner_parcels($id);

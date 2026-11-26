@@ -4,6 +4,29 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.5] – 2026-11-26
+
+### Opraveno
+
+- Aplikace běží na PHP 8.5 a dál i na PHP 7.4 (jeden kód pro obě verze, bez build kroku). Podrobnosti a postup přechodu serveru v [MIGRATION.md](MIGRATION.md).
+- Syntaxe, kterou PHP 8 nenačte: funkce `match()` přejmenovaná na `regex_match()`, vnořený ternární operátor v detailu vlastníka uzávorkovaný podle dosavadního vyhodnocení, přístup ke znaku řetězce `$s{$i}` v přibalené knihovně `plugin/minify/`, vlastní `mb_ucFirst()` / `mb_lcFirst()` kolidující s vestavěnými funkcemi PHP 8.4.
+- PDO: chyby SQL vracejí `false` jako v 7.4 (`ERRMODE_SILENT`), místo aby na PHP 8 shodily stránku nebo noční report; hodnoty z databáze jsou řetězce jako v 7.4 (`ATTR_STRINGIFY_FETCHES`), takže funguje porovnání `do_not_contact === '1'` (štítek „neoslovovat“, zaškrtávátko v úpravě, vynechání v exportu).
+- Vlastník bez termínu oslovení (`0000-00-00`) by se na PHP 8 nezobrazoval jako „nenastaven“ (výpis, úprava, export).
+- Detail neexistujícího vlastníka a vlastníka bez parcel by na PHP 8 spadl na `count()`; `owner_parcels()` vrací prázdné pole místo `null`.
+- Noční report by na PHP 8 vždy hlásil „curl není k dispozici“ (`is_resource()` na objektu `CurlHandle`) a nepingl reportovací službu; teď hlásí skutečný výsledek jako na 7.4.
+- Deprecated konstrukce PHP 8.x: `case …;`, přetypování `(integer)` / `(boolean)`, operátor backtick, `strftime()`, `get_magic_quotes_gpc()`, `curl_close()`, dynamické vlastnosti tříd, implicitně nullable parametr, `fputcsv()` bez `$escape`, `PDO::MYSQL_ATTR_INIT_COMMAND`, `null` do parametrů vestavěných funkcí.
+
+### Přidáno
+
+- PHPStan (úroveň 2) pro PHP 7.4 (`phpstan.neon`) i 8.5 (`phpstan-php85.neon`), baseline jen pro proměnné z includovaných šablon.
+- `MIGRATION.md`: co se při migraci změnilo a proč, co nastavit na serveru, pořadí nasazení, návrat a ověření.
+
+### Změněno
+
+- `CLAUDE.md` přeložený do češtiny; nové pravidlo udržovat aktuální `MIGRATION.md`.
+- README: testy jsou zelené na PHP 7.4 i 8.5, příkazy pro PHPStan, rozhodnutí při migraci.
+- TODO: nové otevřené položky z revize migrace – dělení nulou při `share_den = 0` (na PHP 8 pád), `null` z databáze do vestavěných funkcí, pole v parametrech GET/POST, `duedate` `0.5` ve formuláři úpravy.
+
 ## [2.7.4] – 2026-11-26
 
 ### Přidáno

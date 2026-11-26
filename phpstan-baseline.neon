@@ -1,0 +1,67 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 6
+			path: admin_dashboard_main.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: admin_municipalities/municipalities_section.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 4
+			path: admin_owners/owners_detail.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 2
+			path: admin_owners/owners_edit.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: admin_parcels_main.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: ajax_municipalities.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 14
+			path: cron/nightly_report.php
+
+		-
+			message: '#^Variable \$db might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: layout/footer.php
+
+		-
+			message: '#^Variable \$time_start might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: layout/footer.php
+
+		-
+			message: '#^Variable \$menu might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: layout/header.php
+
+		-
+			message: '#^Variable \$page_title might not be defined\.$#'
+			identifier: variable.undefined
+			count: 1
+			path: layout/header.php
