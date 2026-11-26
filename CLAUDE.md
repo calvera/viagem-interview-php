@@ -25,6 +25,8 @@ Každá pracovní položka (jeden úkol z `TODO.md` nebo jedna ucelená změna) 
 
 `MIGRATION.md` popisuje, co jsme při migraci na PHP 8.5 udělali, a co je potřeba přenastavit na produkčním serveru (rozšíření, php.ini, locale, cron, změny v databázi, pořadí nasazení, návrat zpět, ověření). Každá položka, která mění něco důležitého pro server nebo migraci, ho aktualizuje v kroku Stavba a review kontroluje, že je aktuální.
 
+Každá změna databáze (index, sloupec, cizí klíč, úprava dat) je samostatný idempotentní SQL soubor v `sql/migrations/` a zapíše se do přehledu DB migrací v `MIGRATION.md`: soubor, verze, co dělá, zda je povinná, kdy ji spustit vůči nahrání souborů, jak ji vrátit. Přehled je seznam všeho, co je potřeba při nasazení spustit, v pořadí spuštění.
+
 ## GUIDE.md
 
 `GUIDE.md` je popis řešení k odevzdání technické úlohy. Stručně a jasně říká, co se udělalo a proč, a odkazuje na podrobné dokumenty. Píše se pro hodnotitele úlohy, ne pro provoz. Každá položka ho aktualizuje v kroku Stavba a review kontroluje, že odpovídá skutečnosti.
