@@ -23,8 +23,9 @@ Rozhodnutí určují hlavně dvě omezení ze zadání:
 6. **Migrace na PHP 8.5 (v2.7.5).** Kód upravený tak, aby běžel na 7.4 i 8.5 se stejným chováním. Testy zelené na obou verzích, popis nasazení v [MIGRATION.md](MIGRATION.md). Nálezy z review, které se netýkají kompatibility, jen zapsané do TODO.
 7. **Oprava logických chyb.** Chyby z revize a z testů (*Chyby v logice* v TODO), každá nejdřív prokázaná testem nebo reprodukcí: `trim_text`, `format_datetime('0000-00-00')`, apostrofy v `getWhere`, dělení nulou při `share_den = 0` (na PHP 8 pád), pole v parametrech GET/POST (text „Array“, na PHP 8 pád), `duedate` ve formuláři po chybě validace, limit exportu. Opravy až po migraci, aby migrace chování neměnila; malé změny, stejné chování na 7.4 i 8.5.
 8. **Oprava bezpečnostních chyb.** Položky z *Bezpečnost* v TODO, každá nejdřív prokázaná neškodnou reprodukcí (hledání, které vrátí všechny řádky, chyba SQL v logu, dočasná poznámka s HTML) nebo testem. Hodnoty filtrů, hledání a našeptávače jdou do SQL jako parametry; poznámka se maže formulářem POST jen u svého vlastníka; všechny formuláře mají CSRF token ze session; pole ve formuláři úpravy je chyba validace; výstupy z uživatelských dat se escapují. Malé změny bez nové vrstvy (tři krátké funkce pro CSRF), stejné výsledky pro běžné hodnoty, stejně na 7.4 i 8.5. Přihlášení zůstává otevřené: kdo a jak se přihlašuje, je rozhodnutí o produktu.
-9. **Zrychlení výpisu vlastníků.** Čeká.
-10. **Jak naložit s celým CRM.** Čeká.
+9. **Zbývající opravy (PHP 8, bezpečnost, logika).** Poslední otevřené položky ze tří sekcí TODO, každá opět nejdřív prokázaná: dočasné řádky s `NULL` v databázi a běh s `E_ALL` (hlášení Deprecated na 8.5), noční report v dočasném kontejneru PHP 7.4 s vygenerovaným `cs_CZ.UTF-8` (čárka místo tečky), dočasný vlastník se vzorcem v exportu CSV, obří číslo strany (chyba SQL), unit testy. Opravy jsou přetypování hodnot z databáze se stejným výstupem, `LC_NUMERIC = C` (stejný formát čísel na 7.4 i 8.5 bez ohledu na locale serveru), apostrof před vzorcem v CSV (telefonní čísla beze změny) a CSV bez escape znaku, aby uvozovka za zpětným lomítkem nerozdělila buňku, odstranění nepoužívaného kódu s neošetřeným SQL, omezení strany na poslední a `format_share()` se jmenovatelem 0. Databáze je po ověření stejná jako předtím (kontrolní součty tabulek).
+10. **Zrychlení výpisu vlastníků.** Čeká.
+11. **Jak naložit s celým CRM.** Čeká.
 
 Každá dokončená položka má vlastní commit, verzi v `composer.json` a git tag. Změny po verzích jsou v [CHANGELOG.md](CHANGELOG.md).
 
@@ -32,14 +33,15 @@ Každá dokončená položka má vlastní commit, verzi v `composer.json` a git 
 
 | | Stav |
 | --- | --- |
-| Aplikace na PHP 7.4 i 8.5 | hotovo (v2.7.5), připraveno k nasazení; před přepnutím serveru na 8.5 ověřit nastavení PHP na serveru |
-| Testy | 96 unit, 37 smoke, 19 Playwright; zelené na PHP 7.4 i 8.5 |
+| Aplikace na PHP 7.4 i 8.5 | hotovo (v2.7.5), připraveno k nasazení; před přepnutím serveru na 8.5 ověřit nastavení PHP na serveru; ošetřené i hodnoty `NULL` z databáze a locale |
+| Testy | 116 unit, 38 smoke, 19 Playwright; zelené na PHP 7.4 i 8.5 |
 | Statická analýza | PHPStan level 2, bez chyb pro 7.4 i 8.5 |
 | Lokální prostředí | Docker: PHP 7.4 (`:8074`), PHP 8.5 (`:8085`), MariaDB se syntetickými daty |
 | Postup nasazení | [MIGRATION.md](MIGRATION.md): nastavení serveru, pořadí, návrat zpět, ověření |
-| Chyby v logice | opravené (TODO, *Chyby v logice*), včetně pádů na PHP 8 při `share_den = 0` a poli v parametrech |
-| Bezpečnost | opravené SQL injection, CSRF, mazání poznámky (POST, jen u vlastníka), XSS; otevřené jen přihlášení (rozhodnutí o produktu) |
-| Známé problémy | [TODO.md](TODO.md): přihlášení, menší nálezy z bezpečnostního review (vzorce v CSV exportu, chybějící pole ve formuláři, nepoužívaný kód), výkon, okrajové případy na PHP 8 (`NULL` z databáze) |
+| Chyby v logice | opravené (TODO, *Chyby v logice*), včetně pádů na PHP 8 při `share_den = 0` a poli v parametrech, obřího čísla strany a `format_share()` se jmenovatelem 0 |
+| Bezpečnost | opravené SQL injection, CSRF, mazání poznámky (POST, jen u vlastníka), XSS, vzorce v CSV exportu (včetně uvozovek za zpětným lomítkem), odstraněný nepoužívaný kód s neošetřeným SQL; přihlášení je otevřená otázka pro zadavatele ([OPENQUESTIONS.md](OPENQUESTIONS.md)) |
+| Známé problémy | [TODO.md](TODO.md): výkon (sekce *Výkon*) |
+| Otevřené otázky pro zadavatele | [OPENQUESTIONS.md](OPENQUESTIONS.md): přihlášení uživatelů, pravidla validace vstupu |
 | Zrychlení výpisu vlastníků | čeká |
 | Popis, jak naložit s celým CRM | čeká |
 
@@ -73,8 +75,9 @@ Ověření: všechny testy zelené na obou verzích, PHPStan bez chyb pro 7.4 i 
 - rozšíření PHP (`php -m` pro web i CLI),
 - `php.ini`: `default_charset = UTF-8`, nastavení odstraněná v PHP 8,
 - proměnná `DB_HOST` pro web (Apache nebo FPM) i pro cron,
-- práva k zápisu do `logs/`, `reports/` a adresáře se session,
-- locale `cs_CZ.UTF-8`.
+- práva k zápisu do `logs/`, `reports/` a adresáře se session.
+
+Locale `cs_CZ.UTF-8` už ověřovat není potřeba: formát desetinných čísel na něm od kroku 9 nezávisí.
 
 Kontrola dat na řádky s `share_den = 0` je jen doporučená: po opravě logických chyb už na PHP 8 nic neshodí.
 
@@ -84,7 +87,7 @@ Nálezy, které se netýkají kompatibility (bezpečnost, ošetření vstupů, d
 
 ## 2. Zrychlení výpisu vlastníků
 
-Čeká. Postup: nejdřív změřit (doba stránky, počet dotazů, `EXPLAIN`), pak opravit podle měření a změřit znovu.
+Čeká. Postup: nejdřív zjistit příčinu (počet SQL dotazů, `EXPLAIN`), pak opravit a porovnat dotazy před a po. Dobu stránky neměříme, že je výpis pomalý, je zřejmé.
 
 ## 3. Jak naložit s celým CRM
 
@@ -106,4 +109,5 @@ Rozhodnutí o rozsahu (co opravit, co jen zapsat do TODO) dělal vývojář. Pra
 - [README.md](README.md): spuštění aplikace a testů.
 - [MIGRATION.md](MIGRATION.md): migrace na PHP 8.5 a nastavení serveru.
 - [TODO.md](TODO.md): zadání, stav úkolů a známé problémy.
+- [OPENQUESTIONS.md](OPENQUESTIONS.md): otevřené otázky pro zadavatele.
 - [CHANGELOG.md](CHANGELOG.md): změny po verzích.

@@ -90,6 +90,7 @@ class FunctionsTest extends TestCase
       'one hectare' => array(10000, '1,00 ha'),
       'hectares' => array(12345, '1,23 ha'),
       'string from DB' => array('2500', '2 500 m²'),
+      'null from DB' => array(null, '0 m²'),
     );
   }
 
@@ -108,7 +109,75 @@ class FunctionsTest extends TestCase
       'whole as strings' => array('2', '2', 'celý'),
       'half' => array(1, 2, '1/2'),
       'not reduced' => array('2', '4', '2/4'),
+      'invalid zero denominator' => array('0', '0', '0/0'),
+      'invalid denominator only' => array('3', '0', '3/0'),
     );
+  }
+
+  /**
+   * @dataProvider csvSafeProvider
+   */
+  public function testCsvSafe($value, $expected)
+  {
+    $this->assertSame($expected, csv_safe($value));
+  }
+
+  public function csvSafeProvider()
+  {
+    return array(
+      'plain text' => array('Novák', 'Novák'),
+      'null' => array(null, null),
+      'empty' => array('', ''),
+      'formula' => array('=HYPERLINK("http://x")', '\'=HYPERLINK("http://x")'),
+      'plus' => array('+1+cmd', '\'+1+cmd'),
+      'minus' => array('-2+3', '\'-2+3'),
+      'at' => array('@SUM(A1)', '\'@SUM(A1)'),
+      'tab' => array("\t=1", "'\t=1"),
+      'carriage return' => array("\r=1", "'\r=1"),
+      'phone' => array('+420 777 123 456', '+420 777 123 456'),
+      'phone with brackets' => array('+420 (777) 123-456', '+420 (777) 123-456'),
+      'sign inside' => array('Novák-Svoboda', 'Novák-Svoboda'),
+    );
+  }
+
+  /**
+   * @dataProvider csvLineProvider
+   */
+  public function testCsvLine($fields, $expected)
+  {
+    $out = fopen('php://memory', 'w+');
+    csv_line($out, $fields);
+    rewind($out);
+
+    $this->assertSame($expected, stream_get_contents($out));
+  }
+
+  public function csvLineProvider()
+  {
+    return array(
+      'plain' => array(array('1', 'Novák', ''), "1;Novák;\n"),
+      'separator and quote' => array(array('a;b', 'say "hi"'), "\"a;b\";\"say \"\"hi\"\"\"\n"),
+      // With the escape character \ the quote after a backslash was not doubled and a spreadsheet split the cell.
+      'quote after backslash' => array(array('x\\";=2+3;\\"'), "\"x\\\"\";=2+3;\\\"\"\"\n"),
+    );
+  }
+
+  /**
+   * Missing municipality or failed query: null without a notice "array offset on null".
+   */
+  public function testLookupsWithoutRowReturnNull()
+  {
+    global $db;
+
+    $db = new class {
+      public function queryOneResult($sql)
+      {
+        return null;
+      }
+    };
+
+    $this->assertNull(get_municipality_name(999999));
+    $this->assertNull(owner_parcel_count(999999));
   }
 
   public function testTrimTextKeepsShortText()

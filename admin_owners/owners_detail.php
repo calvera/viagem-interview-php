@@ -139,7 +139,7 @@ if (count($parcels))
         <td><?php echo h($p['cadastral_area']) ?> <small>(<?php echo h($p['cadastral_code']) ?>)</small></td>
         <td><?php echo h($p['parcel_number']) ?></td>
         <td><?php echo $p['lv_number'] ?></td>
-        <td><?php echo h(mb_ucFirst($p['land_type'])) ?></td>
+        <td><?php echo h(mb_ucFirst((string)$p['land_type'])) ?></td>
         <td class="right"><?php echo format_area($p['area_m2']) ?></td>
         <td class="right"><?php echo format_share($p['share_num'], $p['share_den']) ?></td>
         <td class="right"><?php echo $p_share_area === null ? '–' : format_area(round($p_share_area)) ?></td>

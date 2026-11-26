@@ -14,7 +14,7 @@ Všechna data jsou syntetická, generují se při prvním startu databáze.
 
 Aplikace nemá přihlášení, uživatel je pevně nastavený v `includes/config.php`.
 
-Stručný popis řešení k odevzdání je v [GUIDE.md](GUIDE.md). Známé problémy jsou v [TODO.md](TODO.md), změny v [CHANGELOG.md](CHANGELOG.md), přechod serveru na PHP 8.5 v [MIGRATION.md](MIGRATION.md).
+Stručný popis řešení k odevzdání je v [GUIDE.md](GUIDE.md). Známé problémy jsou v [TODO.md](TODO.md), otázky pro zadavatele v [OPENQUESTIONS.md](OPENQUESTIONS.md), změny v [CHANGELOG.md](CHANGELOG.md), přechod serveru na PHP 8.5 v [MIGRATION.md](MIGRATION.md).
 
 ## Spuštění
 
@@ -55,8 +55,8 @@ Kontrola „žádná PHP chyba“ hledá na stránce výpis fatální chyby a ch
 
 | Sada | Co ověřuje |
 | --- | --- |
-| `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování, parametry GET/POST, CSRF token…), skládání SQL v `Database::getWhere()` a parametry filtrů a hledání v `Section` (hodnota nikdy není v textu SQL). Bez databáze. |
-| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
+| `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování, ošetření buněk CSV proti vzorcům, parametry GET/POST, CSRF token…), skládání SQL v `Database::getWhere()`, parametry filtrů a hledání v `Section` (hodnota nikdy není v textu SQL) a formátování buněk výpisu s `NULL`. Bez databáze. |
+| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
 | Playwright (`e2e/`) | Totéž v prohlížeči (Chromium) a navíc JavaScript a klikání: menu, filtry, řazení, stránkování, našeptávač obcí (popisek se vloží jako text, ne HTML), potvrzovací dialog mazání poznámky (vždy se zruší), stažení CSV. Po každém testu ověří, že v konzoli prohlížeče není chyba a na stránce není výpis fatální chyby ani chyby syntaxe. Test mazání poznámky navíc v prohlížeči zablokuje každý POST, takže poznámku nesmaže, ani kdyby potvrzovací dialog nefungoval. |
 
 Nejdřív spusťte aplikaci (`docker compose up -d`, viz výše). Výpis vlastníků je pomalý (jednotky až desítky sekund na stránku), smoke sada proto trvá asi minutu a Playwright asi dvě.
@@ -86,7 +86,7 @@ APP_URL=http://localhost:8085 vendor/bin/phpunit --testsuite smoke
 cd e2e && npx playwright test --project=php85
 ```
 
-Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 96, smoke 37, Playwright 19 testů na každou verzi).
+Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 116, smoke 38, Playwright 19 testů na každou verzi).
 
 Skripty `composer test` a `composer test:smoke` spouští PHPUnit pod PHP hostitele (v image `php74` Composer není). Pro unit testy na PHP 7.4 proto použijte příkaz s `docker compose run` výše.
 

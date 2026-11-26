@@ -105,4 +105,13 @@ class SectionWhereTest extends TestCase
     $this->assertStringContainsString('value="&lt;script&gt;y&lt;/script&gt;"', $html);
     $this->assertStringContainsString('„<b>&lt;script&gt;y&lt;/script&gt;</b>“', $html);
   }
+
+  public function testIntCellFormatsNumberAndNull()
+  {
+    $section = new Section('owners');
+    $col = array('type' => 'int');
+
+    $this->assertSame('1 234', $section->formatCell('parcel_count', $col, array('parcel_count' => '1234')));
+    $this->assertSame('0', $section->formatCell('parcel_count', $col, array('parcel_count' => null)));
+  }
 }

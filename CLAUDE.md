@@ -1,6 +1,6 @@
 # Pravidla projektu
 
-Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `CHANGELOG.md`, `MIGRATION.md`, `GUIDE.md`, `CLAUDE.md`) se píší česky.
+Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `OPENQUESTIONS.md`, `CHANGELOG.md`, `MIGRATION.md`, `GUIDE.md`, `CLAUDE.md`) se píší česky.
 
 ## Postup u pracovních položek
 
@@ -28,3 +28,7 @@ Každá pracovní položka (jeden úkol z `TODO.md` nebo jedna ucelená změna) 
 ## GUIDE.md
 
 `GUIDE.md` je popis řešení k odevzdání technické úlohy. Stručně a jasně říká, co se udělalo a proč, a odkazuje na podrobné dokumenty. Píše se pro hodnotitele úlohy, ne pro provoz. Každá položka ho aktualizuje v kroku Stavba a review kontroluje, že odpovídá skutečnosti.
+
+## OPENQUESTIONS.md
+
+Otevřené otázky pro zadavatele (rozhodnutí o produktu, která nejsou opravou chyby, např. přihlášení nebo pravidla validace) patří do `OPENQUESTIONS.md`, ne do `TODO.md`. Dokud nepřijde odpověď, neřeší se. Po rozhodnutí se u otázky doplní výsledek a odkaz na položku v `TODO.md` nebo na verzi.

@@ -119,7 +119,7 @@ $report[] = '';
 $report[] = 'Druhy pozemků:';
 foreach ($land_types as $lt)
 {
-  $report[] = sprintf('  %-35s %9d parcel %14s ha', mb_ucFirst($lt['land_type']), $lt['cnt'], number_format($lt['area'] / 10000, 2, ',', ' '));
+  $report[] = sprintf('  %-35s %9d parcel %14s ha', mb_ucFirst((string)$lt['land_type']), $lt['cnt'], number_format($lt['area'] / 10000, 2, ',', ' '));
 }
 
 $duration = round(microtime(true) - $time_start, 2);

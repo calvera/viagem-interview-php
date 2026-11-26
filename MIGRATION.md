@@ -29,13 +29,13 @@ Pravidlo: na PHP 7.4 se chování nesmí změnit a na 8.5 musí být stejné jak
 
 ### Deprecated (dnes jen varování, v PHP 9 chyba)
 
-`case …;` místo `case …:`, `(integer)` a `(boolean)`, operátor backtick (`gethostname()`), `strftime()` (`date()` se stejným formátem), `get_magic_quotes_gpc()` (v 7.4 vždy `false`), `curl_close()` (8.5), dynamické vlastnosti tříd `Database`, `QueryResult`, `Section` (8.2), implicitně nullable parametr (8.4), `fputcsv()` bez `$escape` (8.4), `PDO::MYSQL_ATTR_INIT_COMMAND` (8.5, náhrada `Pdo\Mysql::ATTR_INIT_COMMAND` v 7.4 není, použije se dostupná), `null` do parametrů vestavěných funkcí (8.1).
+`case …;` místo `case …:`, `(integer)` a `(boolean)`, operátor backtick (`gethostname()`), `strftime()` (`date()` se stejným formátem), `get_magic_quotes_gpc()` (v 7.4 vždy `false`), `curl_close()` (8.5), dynamické vlastnosti tříd `Database`, `QueryResult`, `Section` (8.2), implicitně nullable parametr (8.4), `fputcsv()` bez `$escape` (8.4), `PDO::MYSQL_ATTR_INIT_COMMAND` (8.5, náhrada `Pdo\Mysql::ATTR_INIT_COMMAND` v 7.4 není, použije se dostupná), `null` do parametrů vestavěných funkcí (8.1; parametry požadavku a po migraci i hodnoty `NULL` z databáze), `null` jako klíč pole (8.5).
 
 ### Nástroje a testy
 
 - Testy z úkolu 0 (unit, smoke, Playwright) beze změny, zelené na 7.4 i 8.5.
 - PHPStan úrovně 2 pro 7.4 i 8.5 (`phpstan.neon`, `phpstan-php85.neon`), viz README.
-- Ručně: celá aplikace s dočasným `E_ALL` a logem do souboru na obou verzích, na testovacích datech bez jediného hlášení; HTML stránek je na 7.4 i 8.5 shodné. Hodnoty `NULL` v `land_type`, `lv_number`, `municipality_name`, které testovací data nemají, ošetřené nejsou, jsou zapsané v TODO. `share_den = 0` a pole v parametrech GET/POST jsou ošetřené (oprava chyb v logice), na PHP 8 už nic neshodí.
+- Ručně: celá aplikace s dočasným `E_ALL` a logem do souboru na obou verzích, na testovacích datech bez jediného hlášení; HTML stránek je na 7.4 i 8.5 shodné. Hodnoty `NULL` v `land_type`, `lv_number`, `municipality_name`, které testovací data nemají, jsou po migraci ošetřené přetypováním a ověřené dočasnými řádky s `NULL` a během s `E_ALL` (na 8.5 bez hlášení, výstup stejný jako předtím). `share_den = 0` a pole v parametrech GET/POST jsou ošetřené (oprava chyb v logice), na PHP 8 už nic neshodí.
 
 ## 2. Co nastavit na serveru
 
@@ -69,9 +69,10 @@ Uživatel, pod kterým běží nové PHP (web i cron), musí mít zápis do `log
 
 ### Locale
 
-`includes/config.php` volá `setlocale(LC_ALL, 'cs_CZ.UTF-8', 'cs_CZ', 'czech')`. Po náhradě `strftime()` na locale nic nezávisí, kromě jednoho rozdílu mezi verzemi:
+`includes/config.php` volá `setlocale(LC_ALL, 'cs_CZ.UTF-8', 'cs_CZ', 'czech')` a hned po něm `setlocale(LC_NUMERIC, 'C')`. Na nainstalovaném locale nic nezávisí, ověřovat ho na serveru není potřeba:
 
-- **ověřit:** je na serveru nainstalované `cs_CZ.UTF-8` (`locale -a`)? Pokud ano, PHP 7.4 píše desetinná čísla s čárkou (`Doba výpočtu: 2,75 s` a „Hotovo za …“ v nočním reportu, `cron/nightly_report.php:127` a `:160`; doba dotazu v `logs/slow_query.log`, `class/Database.php:130`), PHP 8 vždy s tečkou (`2.75`). Do databáze PDO čísla předává nezávisle na locale. Po přepnutí se proto může změnit formát těchto čísel. V Dockeru locale není, obě verze píšou tečku.
+- Desetinná čísla převedená na text (`Doba výpočtu` a „Hotovo za …“ v nočním reportu, doba dotazu v `logs/slow_query.log`) psalo PHP 7.4 s nainstalovaným `cs_CZ.UTF-8` s čárkou (`2,75`), PHP 8 vždy s tečkou. Díky `LC_NUMERIC = C` píšou obě verze tečku. Ověřeno v dočasném kontejneru PHP 7.4 s vygenerovaným `cs_CZ.UTF-8`: před úpravou „Hotovo za 2,77 s“, po ní „2.82 s“.
+- Do databáze PDO čísla předává nezávisle na locale (ověřeno tamtéž, `2.76`). `number_format()` má oddělovače v parametrech, `strftime()` aplikace už nepoužívá. `LC_COLLATE` aplikace nepoužívá, `strtolower()` jen na ASCII. Na `LC_CTYPE` závisí třídy znaků v regulárních výrazech bez `/u` (`\s`, `\d`: `class/Database.php:130`, volání `regex_match()`, `admin_owners/owners_edit.php:40`). Pro `cs_CZ.UTF-8` je výsledek na 7.4 i 8.5 stejný; jinak by se mohl lišit jen tehdy, kdyby se použila záložní locale `cs_CZ` / `czech` v kódování ISO-8859-2.
 
 ### Cron
 

@@ -17,12 +17,12 @@ function parcels_row($r, $section)
   foreach ($owners as $o)
   {
     $links[] = '<a href="index.php?url=owners/detail&amp;id=' . $o['id'] . '">' . h(owner_name($o)) . '</a> <small>(' . format_share($o['share_num'], $o['share_den']) . ')</small>';
-    $lv[$o['lv_number']] = $o['lv_number'];
+    $lv[(string)$o['lv_number']] = $o['lv_number'];
   }
 
   $r['owners_html'] = count($links) ? implode('<br>', $links) : '<span class="muted">bez vlastníka</span>';
   $r['lv'] = implode(', ', $lv);
-  $r['land_type'] = mb_ucFirst($r['land_type']);
+  $r['land_type'] = mb_ucFirst((string)$r['land_type']);
   $r['parcel'] = $r['parcel_number'];
 
   return $r;
@@ -32,7 +32,7 @@ $land_types = array();
 $res = $db->query("select distinct land_type from parcels order by land_type");
 while ($r = $res->fetch_assoc())
 {
-  $land_types[$r['land_type']] = mb_ucFirst($r['land_type']);
+  $land_types[(string)$r['land_type']] = mb_ucFirst((string)$r['land_type']);
 }
 
 $section = new Section('parcels');

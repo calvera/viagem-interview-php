@@ -8,6 +8,8 @@ else error_reporting(E_ERROR | E_PARSE);
 ini_set('display_errors', 1);
 date_default_timezone_set('Europe/Prague');
 setlocale(LC_ALL, 'cs_CZ.UTF-8', 'cs_CZ', 'czech');
+// Decimal point in float to string like PHP 8 (PHP 7.4 uses the locale's comma).
+setlocale(LC_NUMERIC, 'C');
 
 define('ROOT', dirname(dirname(__FILE__)));
 
@@ -17,7 +19,7 @@ define('DB_USER', 'crm');
 define('DB_PASS', 'crm');
 
 define('APP_NAME', 'Evidence vlastníků');
-define('APP_VERSION', '2.7.7');
+define('APP_VERSION', '2.7.8');
 define('APP_USER', 'operator.a');
 
 define('LIST_LIMIT', 50);

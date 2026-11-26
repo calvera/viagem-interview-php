@@ -30,11 +30,11 @@ header('Cache-Control: no-cache');
 $out = fopen('php://output', 'w');
 
 fwrite($out, "\xEF\xBB\xBF");
-fputcsv($out, array('Export vlastníků', date('d.m.Y H:i'), $_SESSION['user']), ';', '"', '\\');
+csv_line($out, array('Export vlastníků', date('d.m.Y H:i'), $_SESSION['user']));
 
 $head = array('ID', 'Typ', 'Titul', 'Jméno', 'Příjmení / název', 'Datum narození', 'IČO', 'Ulice', 'PSČ', 'Město',
   'Obec (KN)', 'Telefon', 'E-mail', 'Termín oslovení', 'Založeno');
-fputcsv($out, $head, ';', '"', '\\');
+csv_line($out, $head);
 
 $exported = 0;
 
@@ -61,14 +61,14 @@ foreach ($rows as $r)
     date('d.m.Y H:i', strtotime($r['created_at'])),
   );
 
-  fputcsv($out, $line, ';', '"', '\\');
+  csv_line($out, array_map('csv_safe', $line));
   $exported++;
 }
 
 if ($skipped)
 {
-  fputcsv($out, array(), ';', '"', '\\');
-  fputcsv($out, array('Vynecháno ' . $skipped . ' vlastníků se zákazem oslovení.'), ';', '"', '\\');
+  csv_line($out, array());
+  csv_line($out, array('Vynecháno ' . $skipped . ' vlastníků se zákazem oslovení.'));
 }
 
 fclose($out);

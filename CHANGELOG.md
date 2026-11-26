@@ -4,6 +4,29 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.8] – 2026-11-26
+
+### Bezpečnost
+
+- Export CSV: text z databáze začínající `=`, `+`, `-`, `@`, tabulátorem nebo CR dostane na začátek `'`, takže ho tabulkový procesor nevyhodnotí jako vzorec (`csv_safe()`). Telefonní čísla (`+420 777 123 456`) a hlavička exportu se nemění. Výjimka pro telefon platí pro všechny sloupce: hodnoty jako `-1-1` zůstanou beze změny a tabulkový procesor je spočítá (bez písmen nejde o funkci ani odkaz).
+- Export CSV zapisuje řádky bez escape znaku (`csv_line()`, `fputcsv(…, '')`): uvozovka za zpětným lomítkem se zdvojí. Dříve se hodnota jako `x\";=2+3;\"` v tabulkovém procesoru rozdělila do více buněk a vzorec `=2+3` obešel ošetření. Výstup se mění jen u hodnot se zpětným lomítkem.
+- Odstraněný nepoužívaný kód, který skládal SQL z neošetřených hodnot: `Database::delete()`, `Database::prepareData()`, `Database::escape()` a `db_escape()`.
+
+### Opraveno
+
+- Hodnoty `NULL` z databáze se do vestavěných funkcí předávají přetypované (`(string)`, `(float)`): druh pozemku do `mb_ucFirst()` (výpis parcel, filtr druhu, detail vlastníka, noční report), číslo LV a druh pozemku jako klíč pole, název obce do `mb_stripos()` (sloupec „V obci“), `number_format()` ve sloupcích typu `int`, na přehledu a ve `format_area()`. `get_municipality_name()` a `owner_parcel_count()` pro chybějící řádek vrátí `null` bez varování „array offset on null“. Na PHP 8.1+ dříve hlášení Deprecated (v PHP 9 chyba), výstup je stejný jako dosud.
+- Desetinná čísla v nočním reportu („Doba výpočtu“, „Hotovo za …“) a v `logs/slow_query.log` mají na PHP 7.4 i 8.x tečku nezávisle na locale serveru (`setlocale(LC_NUMERIC, 'C')` v `includes/config.php`). Dříve na PHP 7.4 s nainstalovaným `cs_CZ.UTF-8` čárku.
+- Obří číslo strany (`page=99999999999999999999`) už nedá chybu SQL a prázdný výpis.
+- `format_share()` se jmenovatelem 0 vrací `0/0` (resp. `num/0`) místo „celý“.
+
+### Změněno
+
+- Číslo strany za koncem výpisu ukáže poslední stranu místo „Nebyly nalezeny žádné …“.
+
+### Přidáno
+
+- Unit testy `csv_safe()`, `csv_line()`, `get_municipality_name()` / `owner_parcel_count()` bez řádku, `format_share()` se jmenovatelem 0, `format_area(null)` a sloupce typu `int` s `NULL` v `Section`; smoke test obří hodnoty `page`.
+
 ## [2.7.7] – 2026-11-26
 
 ### Bezpečnost

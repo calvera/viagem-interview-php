@@ -37,3 +37,28 @@ Výpis vlastníků (`admin_owners/owners_functions.php:66`) porovnává `strtoti
 - b) Dnešní termín po splatnosti je: report počítá `duedate <= curdate()`.
 
 **Doporučení:** a).
+
+## 3. Přihlášení uživatelů
+
+**Stav:** otevřená.
+
+Aplikace nemá přihlášení, uživatel je natvrdo `operator.a` (`APP_USER` v `includes/config.php`). Kdo je zapsaný u poznámek a v logu, proto neodpovídá skutečnosti a kdokoli s přístupem k síti může data měnit.
+
+**Otázky:**
+
+- Kdo jsou uživatelé a odkud se berou (vlastní tabulka, firemní adresář / LDAP, SSO)?
+- Jsou potřeba role (např. jen čtení, obchodník, správce)?
+- Řeší přístup dnes něco před aplikací (VPN, HTTP autentizace na serveru)? Pokud ano, stačí převzít jméno uživatele odtud.
+
+## 4. Validace vstupu ve formuláři úpravy vlastníka
+
+**Stav:** otevřená.
+
+Pole, které v odeslaném formuláři chybí úplně, se uloží jako prázdné (`title`, `street`… `''`, `note` `NULL`, `duedate` jako `0000-00-00`, tj. termín „nenastaven“: sloupec je `DATE NOT NULL DEFAULT '0000-00-00'` a při `sql_mode = ''` se `NULL` uloží jako výchozí hodnota; `admin_owners/owners_edit.php:25-35`). Stane se to jen u ručně upraveného požadavku s platným CSRF tokenem.
+
+**Otázky:**
+
+- Má chybějící pole být chybou validace, nebo se má ponechat hodnota z databáze?
+- Jaká pravidla mají platit pro jednotlivá pole (povinná pole, formát telefonu, PSČ jen česká, rozsah termínu oslovení)? Dnes se kontroluje jen příjmení / název, e-mail, PSČ (5 číslic) a platné datum.
+- **Délka polí se nekontroluje nikde.** Sloupce v `owners` mají omezenou délku (`title` 30, `first_name` 60, `last_name` 160, `street` a `city` 120, `zip` 6, `phone` 20, `email` 120 znaků). Databáze běží se `sql_mode = ''`, takže delší hodnotu potichu ořízne a uloží; uživatel se o tom nedozví. Má delší hodnota být chybou validace?
+- **Kontrola v prohlížeči neexistuje.** Formulář má jen `type="date"` u termínu oslovení; žádné `required`, `maxlength`, `type="email"` ani JavaScript. Chceme kontrolu i v prohlížeči (rychlejší odezva pro uživatele), nebo stačí server? Kontrola na serveru zůstává v každém případě.

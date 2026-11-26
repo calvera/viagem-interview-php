@@ -222,6 +222,7 @@ class Section
   {
     $this->total = $this->getCount();
     $this->pages = ceil($this->total / $this->limit);
+    $this->page = max(1, min($this->page, (int)$this->pages));
 
     $rows = $this->getRows();
 
@@ -351,7 +352,7 @@ class Section
       case 'datetime':
         return format_datetime($val);
       case 'int':
-        return number_format($val, 0, ',', ' ');
+        return number_format((float)$val, 0, ',', ' ');
       case 'area':
         return format_area($val);
       case 'link':

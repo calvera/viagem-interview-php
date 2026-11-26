@@ -1,16 +1,5 @@
 <?php
 
-function db_escape($val)
-{
-  if (is_array($val))
-  {
-    foreach ($val as $key => $v) $val[$key] = db_escape($v);
-    return $val;
-  }
-
-  return addslashes($val);
-}
-
 function h($s)
 {
   return @htmlspecialchars($s === null ? '' : $s, ENT_QUOTES, 'UTF-8');
@@ -133,12 +122,15 @@ function format_datetime($date, $empty = '–')
 function format_area($m2)
 {
   if ($m2 >= 10000) return number_format($m2 / 10000, 2, ',', ' ') . ' ha';
-  return number_format($m2, 0, ',', ' ') . ' m²';
+  return number_format((float)$m2, 0, ',', ' ') . ' m²';
 }
 
+/**
+ * Share as "num/den", "celý" for a whole share (an invalid denominator 0 is never whole).
+ */
 function format_share($num, $den)
 {
-  if ($num == $den) return 'celý';
+  if ($den != 0 && $num == $den) return 'celý';
   return $num . '/' . $den;
 }
 
@@ -155,6 +147,26 @@ function trim_text($s, $length = 80)
 {
   if (mb_strlen($s, 'UTF-8') <= $length) return $s;
   return mb_substr($s, 0, $length, 'UTF-8') . '…';
+}
+
+/**
+ * CSV cell that a spreadsheet will not evaluate as a formula: text starting with = + - @, tab or CR
+ * gets a leading apostrophe. Phone-like numbers (+420 777 123 456) stay unchanged.
+ */
+function csv_safe($value)
+{
+  if (!preg_match('/^[=+\-@\t\r]/', (string)$value)) return $value;
+  if (preg_match('/^\+?[0-9 ()-]+$/', $value)) return $value;
+  return "'" . $value;
+}
+
+/**
+ * Write one CSV line separated by ";". No escape character (RFC 4180, like spreadsheets):
+ * every quote is doubled, also after a backslash.
+ */
+function csv_line($out, $fields)
+{
+  fputcsv($out, $fields, ';', '"', '');
 }
 
 function owner_type_label($type, $lower = false)
@@ -187,7 +199,7 @@ function get_municipality_name($id)
   global $db;
 
   $r = $db->queryOneResult("select name from municipalities where id = " . intval($id));
-  return $r['name'];
+  return $r ? $r['name'] : null;
 }
 
 function owner_parcel_count($owner_id)
@@ -195,7 +207,7 @@ function owner_parcel_count($owner_id)
   global $db;
 
   $r = $db->queryOneResult("select count(*) as cnt from ownerships where owner_id = " . intval($owner_id));
-  return $r['cnt'];
+  return $r ? $r['cnt'] : null;
 }
 
 function owner_parcels_in_municipality($owner_id, $municipality)
@@ -207,7 +219,7 @@ function owner_parcels_in_municipality($owner_id, $municipality)
 
   foreach ($parcels as $p)
   {
-    if (mb_stripos($p['municipality_name'], $municipality, 0, 'UTF-8') === false) continue;
+    if (mb_stripos((string)$p['municipality_name'], $municipality, 0, 'UTF-8') === false) continue;
     $result['cnt']++;
     $result['area'] += share_area($p['area_m2'], $p['share_num'], $p['share_den']);
   }

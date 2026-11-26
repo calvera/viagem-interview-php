@@ -27,7 +27,7 @@ $runs = $db->queryResult("select * from report_runs order by run_date desc limit
 <div class="cards">
 <?php foreach ($stats as $s) { ?>
   <div class="card">
-    <div class="card_value"><?php echo number_format($s['value'], 0, ',', ' ') ?></div>
+    <div class="card_value"><?php echo number_format((float)$s['value'], 0, ',', ' ') ?></div>
     <div class="card_title"><?php if ($s['url']) { ?><a href="<?php echo $s['url'] ?>"><?php echo $s['title'] ?></a><?php } else echo $s['title'] ?></div>
   </div>
 <?php } ?>

@@ -240,21 +240,6 @@ class Database
     return $exit;
   }
 
-  static function escape($val)
-  {
-    return db_escape($val);
-  }
-
-  function prepareData($data)
-  {
-    $prepared = array();
-    foreach ($data as $column => $value)
-    {
-      $prepared[$column] = "'" . $this->escape(trim($value)) . "'";
-    }
-    return $prepared;
-  }
-
   function insert($data, $table)
   {
     $cols = array();
@@ -284,11 +269,6 @@ class Database
     $bind = $this->bindParam($id_name, $data[$id_name]);
 
     return $this->query("update " . $table . " set " . implode(', ', $set) . " where `" . $id_name . "` = :" . $bind);
-  }
-
-  function delete($table, $id_name, $id)
-  {
-    return $this->query("delete from " . $table . " where " . $id_name . " = " . $id . " limit 1");
   }
 
   function getId()

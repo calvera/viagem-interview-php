@@ -48,6 +48,7 @@ class PagesTest extends TestCase
       'parcels' => array('/index.php?url=parcels', 'Parcely', 'class="pagination"'),
       'parcels by land type' => array('/index.php?url=parcels&f_land_type=orn%C3%A1%20p%C5%AFda', 'Parcely', '<td class="col_string">Orná půda</td>'),
       'municipalities' => array('/index.php?url=municipalities', 'Obce', 'f_municipality='),
+      'municipalities huge page shows last page' => array('/index.php?url=municipalities&page=99999999999999999999', 'Obce', ', strana 125 z 125'),
       'municipalities by region' => array('/index.php?url=municipalities&f_region=Z%C3%A1padn%C3%AD%20kraj', 'Obce', '<td class="col_string">Západní kraj</td>'),
       'array url is ignored' => array('/index.php?url%5B%5D=x', 'Přehled', 'Poslední poznámky'),
       'array search is ignored' => array('/index.php?url=owners&search%5B%5D=x', 'Vlastníci pozemků', 'class="pagination"'),
