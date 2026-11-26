@@ -30,9 +30,9 @@ Omezení ze zadání:
      - [x] Opravit: data pro celou stránku se načtou několika dotazy a přibyl index. Výchozí řazení zůstalo, jeho změnu rozhodl zadavatel (otázka 5, položka *Výchozí řazení vlastníků*).
      - [x] Index dodat jako SQL migraci s návodem v `MIGRATION.md` (nasazení nemá migrační krok).
      - [x] Počet SQL dotazů a `EXPLAIN` před a po zapsat do README.
-3. [ ] **Popsat, jak naložit s celým CRM**
-   - Cíl: nejvýše 2 strany o tom, jak postupovat s celým CRM (velký kód, vlastní framework, bez testů, nasazení nahráním souborů, malý tým).
-   - Řešení: zatím nenapsáno (kapitola 3 v `GUIDE.md`).
+3. [x] **Popsat, jak naložit s celým CRM** (v2.9.1, 2026-11-27)
+   - Cíl: nejvýše 2 strany o postupu s celým CRM.
+   - Řešení: [GOAL.md](GOAL.md). Postupná náhrada po stabilizaci, tato aplikace jako pilot, případové studie v příloze.
 
 Odevzdání:
 

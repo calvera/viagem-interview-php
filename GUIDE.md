@@ -26,7 +26,7 @@ Rozhodnutí určují dvě omezení ze zadání:
 9. **Zbývající opravy (v2.7.8).** Hodnoty `NULL` z databáze, locale, vzorce v CSV, obří číslo strany.
 10. **Zrychlení výpisů (v2.7.9–v2.8.3, v2.9.0).** Viz kapitola 2.
     - Mezi tím v2.8.4: stejné zaokrouhlení výměr na 7.4 i 8.5 (kompatibilita).
-11. **Jak naložit s celým CRM.** Čeká.
+11. **Jak naložit s celým CRM (v2.9.1).** Viz kapitola 3 a [GOAL.md](GOAL.md).
 
 Každá chyba se před opravou nejdřív prokázala testem nebo reprodukcí. Každá položka má vlastní commit, verzi a git tag ([CHANGELOG.md](CHANGELOG.md)).
 
@@ -43,7 +43,7 @@ Každá chyba se před opravou nejdřív prokázala testem nebo reprodukcí. Ka�
 | Zrychlení výpisu vlastníků | hotovo: 5 SQL dotazů na stránku místo 103 a tři indexy |
 | Známé problémy | [TODO.md](TODO.md), mimo jiné název obce ve výpisu parcel a textový filtr obce |
 | Otevřené otázky | [OPENQUESTIONS.md](OPENQUESTIONS.md) |
-| Jak naložit s celým CRM | čeká |
+| Jak naložit s celým CRM | [GOAL.md](GOAL.md): postupná náhrada, tato aplikace jako pilot |
 
 ## 0. Testy před migrací
 
@@ -87,7 +87,11 @@ Důkazem je počet SQL dotazů v patičce a `EXPLAIN`, dobu stránky neměříme
 
 ## 3. Jak naložit s celým CRM
 
-Čeká.
+Návrh je v [GOAL.md](GOAL.md): hlavní text nejvýše 2 strany, případové studie v příloze.
+
+- **Žádný velký přepis, čtyři fáze:** stabilizace (testy, PHPStan, CI), PHP 8.5 v celém CRM, nasazení z gitu s buildem, postupná náhrada modulů v Symfony vedle starého kódu (strangler fig).
+- **Zastaralý kód podle používání a míry změn:** nepoužívaný smazat, stabilní jen udržovat, přesouvat nejdřív malý modul s nízkým rizikem, pak často měněné a kritické. Vlastní framework zmrazit.
+- **Tato aplikace je pilot:** testy před první změnou, kód na 7.4 i 8.5, smyčka AI agentů s review.
 
 ## Jak se pracovalo
 
@@ -103,6 +107,7 @@ O rozsahu (co opravit, co jen zapsat do TODO) rozhodoval vývojář. Pravidla js
 ## Dokumenty
 
 - [README.md](README.md): spuštění aplikace a testů, podrobnosti zrychlení.
+- [GOAL.md](GOAL.md): jak postupovat s celým CRM.
 - [MIGRATION.md](MIGRATION.md): migrace na PHP 8.5, nastavení serveru, DB migrace.
 - [TODO.md](TODO.md): stav úkolů a známé problémy.
 - [OPENQUESTIONS.md](OPENQUESTIONS.md): otázky pro zadavatele.

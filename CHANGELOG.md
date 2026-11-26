@@ -4,10 +4,16 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). Z�
 
 ## [Nevydáno]
 
+## [2.9.1] – 2026-11-27
+
 ### Změněno
 
 - Dokumenty zestručněné. Položky TODO jsou rozdělené na popis a řešení, OPENQUESTIONS jsou srozumitelné bez technických znalostí.
 - `CLAUDE.md`: pravidla stylu dokumentů.
+
+### Přidáno
+
+- `GOAL.md`: jak postupovat s celým CRM, případové studie v příloze.
 
 ## [2.9.0] – 2026-11-27
 

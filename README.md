@@ -15,6 +15,7 @@ Aplikace nemá přihlášení, uživatel je pevně nastavený v `includes/config
 Další dokumenty:
 
 - [GUIDE.md](GUIDE.md): stručný popis řešení k odevzdání.
+- [GOAL.md](GOAL.md): jak postupovat s celým CRM.
 - [MIGRATION.md](MIGRATION.md): přechod serveru na PHP 8.5 a DB migrace.
 - [TODO.md](TODO.md): úkoly a známé problémy.
 - [OPENQUESTIONS.md](OPENQUESTIONS.md): otázky pro zadavatele.

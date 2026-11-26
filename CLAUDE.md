@@ -1,6 +1,6 @@
 # Pravidla projektu
 
-Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `OPENQUESTIONS.md`, `CHANGELOG.md`, `MIGRATION.md`, `GUIDE.md`, `CLAUDE.md`) se píší česky.
+Všechny dokumenty v repozitáři (`README.md`, `TODO.md`, `OPENQUESTIONS.md`, `CHANGELOG.md`, `MIGRATION.md`, `GUIDE.md`, `GOAL.md`, `CLAUDE.md`) se píší česky.
 
 ## Postup u pracovních položek
 
