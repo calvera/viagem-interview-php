@@ -4,15 +4,15 @@
 
 Omezení ze zadání: nasazuje se nahráním změněných souborů bez build kroku a server se upgraduje nezávisle na kódu. Kód proto musí běžet zároveň na PHP 7.4 i 8.5 a nesmí za běhu potřebovat Composer ani jiný build (Composer slouží jen pro vývojové nástroje). Testy žádné nejsou, tým má 2–3 vývojáře a vývoj pro byznys nesmí stát.
 
-0. [ ] **Testy jako záchranná síť pro migraci** – napsat teď, nechat projít na PHP 7.4 (zachytí dnešní chování), po migraci stejné testy spustit na 8.5. Jen čtení, žádný test nemění data v DB.
-   - [ ] **PHPUnit – konfigurace:** `phpunit.xml` (sady `unit` a `smoke`, deprecations shodí test), `tests/bootstrap.php` (načte jen `includes/functions.php` a `class/Database.php`, ne `config.php`), skripty `test` a `test:smoke` v `composer.json`.
-   - [ ] **PHPUnit – unit testy pomocných funkcí** (`tests/Unit/FunctionsTest.php`): `h`, `format_date`, `format_datetime`, `format_area`, `format_share`, `trim_text`, `owner_type_label`, `owner_name`, `mb_ucFirst`, `mb_lcFirst`, `is_ico`, `select_options`.
-   - [ ] **PHPUnit – unit testy skládání SQL** (`tests/Unit/DatabaseWhereTest.php`): `Database::getWhere()` bez připojení k DB, parametry, `and`, `like`, kolize jmen parametrů.
-   - [ ] **PHPUnit – smoke testy přes HTTP** (`tests/Smoke/PagesTest.php`, `APP_URL`): všechny stránky vrátí 200, správný nadpis a žádnou PHP chybu; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, našeptávač (JSON), 404.
-   - [ ] **Playwright – konfigurace** (`e2e/`): vlastní `package.json`, projekty `php74` (`:8074`) a `php85` (`:8085`), fixture, která hlídá chyby v konzoli a PHP chyby v těle stránky, `.gitignore`.
-   - [ ] **Playwright – navigace a výpisy:** menu a nadpisy, 404, vlastníci (filtr, hledání IČO, řazení, stránkování, detail, formulář úpravy), parcely, obce.
-   - [ ] **Playwright – JavaScript a interakce:** našeptávač obcí, potvrzovací dialog mazání poznámky (zrušit → poznámka zůstane), stažení CSV exportu.
-   - [ ] **Ověření a dokumentace:** vše zelené na PHP 7.4; na 8.5 zatím očekávaně červené (`match()`); README sekce „Testy“ s příkazy pro obě verze.
+0. [x] **Testy jako záchranná síť pro migraci** – napsat teď, nechat projít na PHP 7.4 (zachytí dnešní chování), po migraci stejné testy spustit na 8.5. Jen čtení, žádný test nemění data v DB. (v2.7.4, 2026-11-26)
+   - [x] **PHPUnit – konfigurace:** `phpunit.xml` (sady `unit` a `smoke`, deprecations shodí test), `tests/bootstrap.php` (jen autoload a časová zóna; `includes/functions.php` a `class/Database.php` načítají až unit testy, ne `config.php`, takže smoke sada běží na libovolném PHP), skripty `test` a `test:smoke` v `composer.json`.
+   - [x] **PHPUnit – unit testy pomocných funkcí** (`tests/Unit/FunctionsTest.php`): `h`, `format_date`, `format_datetime`, `format_area`, `format_share`, `trim_text`, `owner_type_label`, `owner_name`, `mb_ucFirst`, `mb_lcFirst`, `is_ico`, `select_options`.
+   - [x] **PHPUnit – unit testy skládání SQL** (`tests/Unit/DatabaseWhereTest.php`): `Database::getWhere()` bez připojení k DB, parametry, `and`, `like`, kolize jmen parametrů.
+   - [x] **PHPUnit – smoke testy přes HTTP** (`tests/Smoke/PagesTest.php`, `APP_URL`): všechny stránky vrátí 200, správný nadpis a žádnou PHP chybu; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, našeptávač (JSON), 404.
+   - [x] **Playwright – konfigurace** (`e2e/`): vlastní `package.json`, projekty `php74` (`:8074`) a `php85` (`:8085`), fixture, která hlídá chyby v konzoli a PHP chyby v těle stránky, `.gitignore`.
+   - [x] **Playwright – navigace a výpisy:** menu a nadpisy, 404, vlastníci (filtr, hledání IČO, řazení, stránkování, detail, formulář úpravy), parcely, obce.
+   - [x] **Playwright – JavaScript a interakce:** našeptávač obcí, potvrzovací dialog mazání poznámky (zrušit → poznámka zůstane), stažení CSV exportu.
+   - [x] **Ověření a dokumentace:** vše zelené na PHP 7.4; na 8.5 zatím očekávaně červené (`match()`); README sekce „Testy“ s příkazy pro obě verze.
 1. [ ] **Převést aplikaci na PHP 8.5** při zachování kompatibility s 7.4 – viz sekce *Kompatibilita s PHP 8*.
    - [ ] Unit, smoke i Playwright testy (úkol 0) zelené na PHP 7.4 i 8.5.
    - [ ] Ověřit noční report v Dockeru na obou verzích (`php74`, `php85`).
@@ -71,4 +71,4 @@ Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené (`php -l
 
 ### Ostatní
 
-- [ ] Přidat testy (zatím žádné nejsou) – viz úkol 0 v zadání.
+- [x] Přidat testy (zatím žádné nejsou) – viz úkol 0 v zadání.

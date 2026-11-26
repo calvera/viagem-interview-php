@@ -8,7 +8,7 @@ Each work item (one TODO entry or one coherent change) goes through this loop:
    - makes the code changes,
    - checks off or updates the entry in `TODO.md`,
    - adds an entry under `## [Nevydáno]` in `CHANGELOG.md`.
-2. **Review**: run a read-only review with a Fable agent (`sonnet-checker` with `model: fable`). It reads the diff and runs checks, and changes nothing.
+2. **Review**: run a read-only review with a Fable agent (`sonnet-checker` with `model: fable`). It only reads the diff and the code: it runs no tests and changes nothing. Running tests is the builder's job.
 3. **Repeat**: if the review is not clean, send its findings back to the same builder (SendMessage) and review again. A work item is done only when the review comes back clean.
 4. **Release**: once the review is clean, the work item gets its own version:
    - bump `version` in `composer.json` (semver: bug fix or compatibility fix → patch, new feature → minor, breaking change → major) and set `time` to the release date (`YYYY-MM-DD`),

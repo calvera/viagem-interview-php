@@ -1,0 +1,14 @@
+{
+  "name": "legacy-app-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:74": "playwright test --project=php74",
+    "test:85": "playwright test --project=php85"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.65.1",
+    "@types/node": "^26.6.11"
+  }
+}

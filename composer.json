@@ -23,6 +23,10 @@
     "require": {
         "php": ">=7.4"
     },
-    "version": "2.7.3",
-    "time": "2026-10-27"
+    "scripts": {
+        "test": "phpunit --testsuite unit",
+        "test:smoke": "phpunit --testsuite smoke"
+    },
+    "version": "2.7.4",
+    "time": "2026-11-26"
 }
