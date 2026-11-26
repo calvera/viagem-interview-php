@@ -98,7 +98,7 @@ V databázi dnes nejsou žádné cizí klíče. Vazby hlídá jen aplikace:
 | Vazba | Typ | Index |
 |---|---|---|
 | `parcels.municipality_id` → `municipalities` | N:1 | ano |
-| `owners.municipality_id` → `municipalities` | N:1 | ne, položka v `TODO.md` |
+| `owners.municipality_id` → `municipalities` | N:1 | ano, složený `(municipality_id, last_name, first_name, id)` (migrace `003`) |
 | `owner_notes.owner_id` → `owners` | N:1 | ano |
 | `ownerships.owner_id` → `owners` | M:N | ano (v2.7.9) |
 | `ownerships.parcel_id` → `parcels` | M:N | ano |
@@ -107,7 +107,7 @@ Testovací data jsou čistá: žádný řádek neodkazuje na neexistující záz
 
 - **Zápisy, které dnes projdou, by skončily chybou.** Sloupce mají `DEFAULT 0` a připojení běží se `sql_mode = ''`. Zápis bez hodnoty dnes potichu uloží 0, s cizím klíčem skončí chybou. Aplikace sama zapisuje jen do `owners` (úprava vlastníka) a maže jen poznámky. Do stejné databáze ale můžou zapisovat jiné moduly CRM nebo importy, a ty je potřeba projít.
 - **Produkční data.** Před přidáním je potřeba na produkci ověřit, že žádné řádky neodkazují na neexistující záznam. Jinak se cizí klíč nepřidá.
-- **Index na `owners.municipality_id`.** InnoDB k cizímu klíči sám založí index, pokud chybí. Proto až po položce *Výchozí řazení vlastníků* (otázka 5).
+- **Index na `owners.municipality_id`.** InnoDB k cizímu klíči sám založí index, pokud chybí. Index už existuje (`idx_owners_municipality`, `municipality_id` jako první sloupec), cizí klíč ho použije a nový nezaloží (ověřeno na prázdných kopiích tabulek).
 
 **Varianty:**
 

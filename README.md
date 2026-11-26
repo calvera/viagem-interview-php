@@ -184,7 +184,7 @@ explain … left join municipalities m … where m.name like '%Lhota%' …;   o:
 
 - **Výchozí řazení** podle `concat(…)` nemůže použít index, každá strana řadí všech 500 tisíc vlastníků. Změna řazení ale změní, kteří vlastníci jsou na které straně: 500 tis. vlastníků má jen 1 070 různých jmen a pořadí uvnitř jména je neurčené. Proto zůstalo beze změny jako otázka 5 v [OPENQUESTIONS.md](OPENQUESTIONS.md); po rozhodnutí viz *Výchozí řazení vlastníků* níže.
 - **`count(*)`** je jeden průchod indexem za stránku a výpis ukazuje přesný počet, proto beze změny.
-- **Filtr obce** hledá podřetězec přes všechny vlastníky (`ALL`). Odkaz z výpisu obcí filtruje podle id (viz *Odkaz „vlastníci“ podle id obce* níže), ale i tak prochází všechny vlastníky. Index na `owners.municipality_id` záměrně není: změní plán dotazu a výpis „Lhota“ pak na 1. straně ukáže jiné vlastníky se stejným jménem (ověřeno dočasným indexem). Filtr je samostatná položka v TODO (*Výkon*) a otázka 1 v OPENQUESTIONS.
+- **Filtr obce** hledá podřetězec přes všechny vlastníky (`ALL`). Odkaz z výpisu obcí filtruje podle id (viz *Odkaz „vlastníci“ podle id obce* níže), ale i tak prochází všechny vlastníky. Index na `owners.municipality_id` záměrně není: změní plán dotazu a výpis „Lhota“ pak na 1. straně ukáže jiné vlastníky se stejným jménem (ověřeno dočasným indexem). Přidal se až po jednoznačném řazení, viz *Index na obec vlastníka*. Filtr je samostatná položka v TODO (*Výkon*) a otázka 1 v OPENQUESTIONS.
 - N+1 ve výpisu parcel a obcí: viz *Výpis parcel a obcí* níže.
 
 ### Výpis parcel a obcí
@@ -265,7 +265,7 @@ explain select os.owner_id, count(*), sum(1e0 * p.area_m2 * os.share_num / nulli
 explain select name from municipalities where id = 1;                         type=const  key=PRIMARY
 ```
 
-Hlavní dotaz a `count(*)` dál procházejí všech 500 tisíc vlastníků, na `owners.municipality_id` index není. Záměrně se nepřidal: změní plán dotazu s filtrem obce a tím pořadí vlastníků se stejným jménem na stranách (viz *Co zůstává*). Index je samostatná položka v TODO, až po jednoznačném řazení (otázka 5).
+Hlavní dotaz a `count(*)` dál procházejí všech 500 tisíc vlastníků, na `owners.municipality_id` index není. Záměrně se nepřidal: změní plán dotazu s filtrem obce a tím pořadí vlastníků se stejným jménem na stranách (viz *Co zůstává*). Index je samostatná položka v TODO, až po jednoznačném řazení (otázka 5); přidaný je v *Index na obec vlastníka* níže.
 
 Ověřeno proti SQL na PHP 7.4 i 8.5: počet vlastníků pro šest obcí (i neexistující id) se rovná `select count(*) from owners where municipality_id = ?`; „V obci“ u všech 240 vlastníků Lhoty (5 stran) odpovídá součtu podílů z `ownerships` a `parcels` (vlastník bez parcely v obci „–“); pro čtyři obce s jedinečným názvem je tabulka s filtrem podle id stejná jako s textovým filtrem; export obsahuje právě vlastníky obce. HTML 31 stránek je před a po změně na PHP 7.4 i 8.5 bajtově shodné (kromě doby vygenerování v patičce): 20 výpisů vlastníků bez nového filtru (filtry, hledání, IČO, řazení, 2. a poslední strana, textový filtr „Lhota“ i s 2. a poslední stranou, řazením, hledáním a typem, „Horní Lhota“), 5 výpisů parcel a 6 výpisů obcí; ve výpisu obcí se liší jen adresa odkazu „vlastníci“ (u všech 150 odkazů na třech stranách id odpovídá kódu obce v řádku). Výjimkou je parcela s hledáním „st. 121“, která se lišila už mezi dvěma načteními před změnou (neurčené pořadí vlastníků, viz výše). Export CSV s filtrem typu a s textovým filtrem obce je také shodný.
 
@@ -327,7 +327,7 @@ Výpis vlastníků i export CSV se ve výchozím stavu řadily `concat(o.last_na
 | hledání IČO | `ALL` + filesort | beze změny (díky histogramu `ico`) |
 | textový filtr obce „Lhota“, 1. strana | `o`: `ALL` + filesort, `m`: `eq_ref` | `o`: `index`, 1 219 řádků |
 | textový filtr obce „Zadní Ves v Údolí“ (80 vlastníků) | `ALL` + filesort, 1,47 mil. stránek | `index`, 292 tis. řádků, 1,46 mil. stránek (bez zlepšení) |
-| filtr podle id obce (`f_municipality_id`) | `ALL` + filesort | beze změny (díky histogramu `municipality_id`) |
+| filtr podle id obce (`f_municipality_id`) | `ALL` + filesort | beze změny (díky histogramu `municipality_id`); s migrací 3 `ref` z vlastního indexu, viz *Index na obec vlastníka* |
 
 ```
 analyze select o.* from owners o order by concat(o.last_name, ' ', o.first_name) asc limit 0, 50;
@@ -351,6 +351,53 @@ Hodnoty ANALYZE v ms jsou jen orientační, stejný plán se mezi běhy liší a
 **Export CSV** používá stejnou `Section` (`getRows(false)`, limit 20 000) a stejné řazení (s hledáním také `o.id + 0`): plán beze změny (`o`: `ALL` + filesort, `m`: `eq_ref`), i s filtrem typu, hledáním a id obce. Pořadí jmen je stejné, uvnitř jména podle id, takže u exportu nad 20 000 řádků je na hranici limitu jiný výběr vlastníků se stejným jménem.
 
 **Chování.** Ověřeno na PHP 7.4 i 8.5 na 20 adresách výpisu vlastníků (výchozí výpis, 2., 5000. a poslední strana, typ P i 2. a poslední strana, typ F, neoslovovat, hledání „Nov“ a „Svobodová“ i 3. strana, IČO, textový filtr „Lhota“ i 2. strana, id obce 1 i 5. strana a 2018, řazení podle založení v obou směrech) a 4 exportech (výchozí, typ P, id obce, hledání): posloupnost jmen (příjmení, jméno) je na každé stránce stejná jako před změnou, vlastníci se stejným jménem jsou ve vzestupném pořadí id, mimo tabulku řádků (počet, stránkování, filtry) je HTML bajtově shodné. Řazení podle založení, IČO a id obce 2018 jsou bajtově shodné celé. Dvě načtení na každé verzi a 7.4 proti 8.5 jsou bajtově shodná, s indexem i bez něj (řazení je jednoznačné). Výpisy parcel (6 adres) a obcí (4 adresy) jsou bajtově shodné se stavem před změnou. Stránka má dál 5 SQL dotazů (s filtrem obce 6, podle id 7).
+
+### Index na obec vlastníka
+
+Poslední vazba bez indexu byla `owners.municipality_id`. Filtr podle id obce (`f_municipality_id`) proto procházel všech 500 tisíc vlastníků a nalezené řadil. Dřív se index nepřidal, protože by změnil plán a s ním pořadí vlastníků se stejným jménem na stranách; od jednoznačného výchozího řazení (*Výchozí řazení vlastníků*) už pořadí výpisu a exportu ve výchozím řazení na plánu nezávisí. Řazení podle sloupce „Založeno“ jednoznačné není (viz *Chování* níže). Index `idx_owners_municipality (municipality_id, last_name, first_name, id)` je SQL migrace [`sql/migrations/003_owners_municipality.sql`](sql/migrations/003_owners_municipality.sql) (nasazení v [MIGRATION.md](MIGRATION.md), 5.3), kód se nemění.
+
+**Proč složený.** Vyzkoušeny oba: prostý `(municipality_id)` čte vlastníky obce a stranu řadí (1. strana 876 stránek), složený čte stranu rovnou v pořadí (156 stránek, bez filesortu), u exportu také bez filesortu. Ostatní dotazy mají s oběma stejný plán. Na testovacích datech má obec nejvýš 240 vlastníků a rozdíl je malý; na produkci může mít velké město vlastníků tisíce a prostý index by pak řadil všechny na každé straně. Složený index je větší (19 MB místo 7,5 MB).
+
+**Plány.** `ANALYZE` hlavního dotazu a `count(*)`, před = po migraci 2 bez indexu, po = s indexem. Stránky jsou čtení z buffer poolu (`Innodb_buffer_pool_read_requests`), ms podle `ANALYZE` jen orientačně.
+
+| Dotaz | před | po |
+| --- | --- | --- |
+| id obce 1 (240 vlastníků), 1. / 2. / 5. (poslední) strana | `ALL` + filesort, 500 000 řádků, 3 985 / 4 136 / 4 560 stránek, 130–140 ms | `ref` `idx_owners_municipality`, 50 / 100 / 240 řádků, 156 / 306 / 726 stránek, pod 1 ms, bez filesortu |
+| id obce 2018 (80 vlastníků), 1. / 2. strana | `ALL` + filesort, 3 984 / 4 074 stránek | `ref`, 158 / 248 stránek |
+| id obce 1 + typ P, 1. / 2. strana | `ALL` + filesort, 3 983 / 4 031 stránek | `ref`, 180 / 240 řádků, 546 / 726 stránek |
+| id obce 1 + typ F, 1. / 4. strana | `ALL` + filesort, 3 985 / 4 362 stránek | `ref`, 61 / 240 řádků, 189 / 726 stránek |
+| id obce 1 + neoslovovat | `ALL` + filesort, 3 860 stránek | `ref`, 726 stránek |
+| id obce 1 + hledání „Nov“ | `ALL` + filesort, 3 869 stránek | `ref` + filesort (`o.id + 0`), 12 řádků, 42 stránek |
+| id obce 1, řazení podle založení | `ALL` + filesort, 3 984 stránek | `ref` + filesort, 877 stránek |
+| `count(*)` s id obce (i s typem, neoslovovat, hledáním) | `ALL`, 3 833 stránek, asi 100 ms | `ref`, 6 stránek (`Using index`), s typem / neoslovovat 726 |
+| export CSV s id obce (`count(*)` vynechaných a řádky) | `ALL` + filesort, 3 833 + 4 535 stránek | `ref`, 726 + 728 stránek, bez filesortu |
+| textový filtr „Lhota“ (20 000 vlastníků), `count(*)` | `o`: `ALL`, `m`: `eq_ref`, 1 008 993 stránek, 760–920 ms | `m`: `ALL` (6 250 obcí), `o`: `ref`, 825 stránek, 8 ms |
+| textový filtr „Lhota“, 1. / 2. / 5. / 9. strana | `o`: `index` `idx_owners_name`, 6 117 / 9 484 / 31 281 / 56 395 stránek, 8–110 ms | **víc stránek:** `m` → `o` `ref` + filesort všech 20 000 nalezených, 60 825 stránek na každé straně, 75–85 ms |
+| textový filtr „Lhota“, 10. / 20. / 50. / poslední (400.) strana | 62 603 / 125 238 / 313 163 / 2 511 422 stránek | 60 825 stránek |
+| textový filtr „Zadní Ves v Údolí“ (80 vlastníků), `count(*)` / 1. / 2. strana | 1 008 993 / 1 463 775 / 2 506 040 stránek, 0,7–1,8 s | 39 / 279 / 279 stránek, 3 ms |
+| textový filtr „Horní“ (50 000) / „nad“ (85 000), `count(*)` + 1. strana | 1 059 459 / 1 010 246 stránek, 0,80 / 0,76 s | 154 024 / 261 414 stránek, 0,21 / 0,34 s |
+| **velmi široký** textový filtr „e“ (400 640) / „a“ (466 000), `count(*)` + 1. strana | 1 009 288 / 1 009 248 stránek, 0,72 / 0,70 s | **horší:** 1 233 332 / 1 435 530 stránek, 1,6 / 1,8 s |
+| bez filtru 1. / 50. strana, `count(*)` | `index` `idx_owners_name`, 153 / 7 508 stránek, `count(*)` 880 | beze změny |
+| neoslovovat 1. / 10. / 60. strana, typ F 1. strana | `index` `idx_owners_name`, 5 052 / 43 457 / 265 298, 10 576 stránek | beze změny |
+| hledání „Svobodová“, bez výsledku, IČO | `ALL` + filesort, 3 984 / 3 833 / 3 836 stránek | beze změny |
+
+Textový filtr „Lhota“: samotný dotaz na řádky strany čte na 1. až 9. straně víc stránek než dříve (6 tis. až 56 tis. → 61 tis.; optimalizátor teď vybírá vlastníky přes obce a všech 20 000 nalezených řadí na každé straně), od 10. strany méně. Stránka jako celek (`count(*)` a řádky) je ale na každé straně mnohem levnější, na 1. straně asi 16× (62 tis. stránek místo 1 mil., asi 90 ms místo 0,9 s), protože `count(*)` už nejoinuje obec ke každému z 500 tisíc vlastníků. Vyhodnoceno jako zlepšení, protože celá stránka je levnější.
+
+**Jak textový filtr škáluje.** Bez indexu stojí `count(*)` textového filtru vždy asi 1 mil. stránek (join obce ke každému vlastníkovi), nezávisle na počtu nalezených. S indexem stojí dotaz na řádky asi 3 stránky na nalezeného vlastníka na každé straně (řadí všechny nalezené) a `count(*)` asi 0,04. Celá stránka je proto levnější, dokud filtr nenajde víc než zhruba 2/3 všech vlastníků podle stránek, resp. asi 40 % podle doby `ANALYZE` (na testovacích datech 330 tis., resp. 200 tis. z 500 tis.). Části názvu obce („Lhota“, „Horní“, „nad“) jsou 4× až 16× levnější, horší jsou jen velmi široké filtry jako jedno písmeno („e“, „a“: 2,2× až 2,6× delší podle `ANALYZE`). Na produkci se má ověřit plán a obvyklý počet nalezených (MIGRATION.md, 5.3, **ověřit**). Samotný podřetězec (`like '%…%'` přes 6 250 obcí) zůstává, je to samostatná položka v TODO.
+
+Noční report, přehled obcí (jen `EXPLAIN`, report se nespouštěl, zapisuje do `report_runs`):
+
+```
+explain select municipality_id, count(*) as cnt from owners group by municipality_id order by cnt desc, municipality_id limit 10;
+před: type=ALL    rows=500000  Using temporary; Using filesort
+po:   type=index  key=idx_owners_municipality  rows=500000  Using index; Using temporary; Using filesort
+```
+
+Čte index (19 MB) místo celé tabulky (60 MB), dočasná tabulka a řazení podle počtu zůstávají.
+
+**Statistiky.** Migrace končí prostým `ANALYZE TABLE owners`. Histogramy z migrace 2 (i `municipality_id`) se znovu nesbírají: popisují hodnoty sloupců, ne indexy, a data se nezměnila (po migraci beze změny). Pro filtr podle id obce teď optimalizátor odhaduje z indexu, plán je stejný i bez histogramů (ověřeno s `use_stat_tables = NEVER`).
+
+**Chování.** Výchozí řazení výpisu i exportu je jednoznačné, takže index stránky nemění. Řazení podle sloupce „Založeno“ (`sort=o.created_at`) řadí jen podle `created_at` bez `id` (TODO, *Chyby v logice*, neurčené pořadí, bod b) a s filtrem obce mu migrace mění plán; pořadí vlastníků se stejným časem by se tak mohlo změnit. Na testovacích datech je `created_at` jedinečné (500 000 hodnot), na produkci se ověří dotazem v MIGRATION.md, 5.3. HTML 41 adres (29 výpisů vlastníků včetně všech případů z tabulky, 5 výpisů parcel, 3 výpisy obcí a 4 exporty CSV, počet SQL dotazů v patičce) je před a po bajtově shodné (kromě doby vygenerování a data exportu), dvě načtení na každé verzi a 7.4 proti 8.5 také. Kontrolní součty tabulek jsou beze změny.
 
 ## Struktura
 

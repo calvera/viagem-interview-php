@@ -1,7 +1,8 @@
 -- Index for the default sort of the owners list (order by o.last_name, o.first_name, o.id).
 -- With it the page is read from the index instead of sorting all 500k owners (filesort).
 -- Idempotent (IF NOT EXISTS), online (LOCK=NONE: reads and writes continue); the code works without the index, only slower.
--- Rollback: ALTER TABLE owners DROP INDEX IF EXISTS idx_owners_name;
+-- Rollback (sql_mode as below, DROP INDEX fails with 1067 under strict mode too):
+--   SET SESSION sql_mode = ''; SET SESSION lock_wait_timeout = 10; ALTER TABLE owners DROP INDEX IF EXISTS idx_owners_name;
 
 -- Same sql_mode as the application (Database::connect()): with a strict server or client default
 -- (NO_ZERO_DATE) ALTER TABLE owners fails with 1067 Invalid default value for 'duedate'.

@@ -4,6 +4,12 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.8.3] – 2026-11-26
+
+### Přidáno
+
+- SQL migrace `sql/migrations/003_owners_municipality.sql`: index `idx_owners_municipality (municipality_id, last_name, first_name, id)` (idempotentní, online) a `ANALYZE TABLE owners`. Výpis vlastníků s filtrem podle id obce čte jen vlastníky obce a stranu rovnou v pořadí (`ref` bez filesortu místo průchodu všemi 500 000 vlastníky), `count(*)` a export CSV s id obce také. Zrychlí i textový filtr „Obec“ (`count(*)` „Lhota“ 825 stránek místo 1 mil.) a přehled obcí v nočním reportu (čte index místo tabulky). Dotaz na řádky textového filtru ale teď řadí všechny nalezené: u „Lhota“ (20 000 vlastníků) čte na 1. až 9. straně víc stránek než dříve (61 tis. místo 6 až 56 tis.), celá stránka s `count(*)` je přesto mnohem levnější (1. strana asi 16×); velmi široký filtr je s indexem pomalejší: podle doby `ANALYZE` zhruba od 40 % všech vlastníků, změřeno 2,2× až 2,6× u jednoho písmena („e“, „a“: 80 až 93 % vlastníků). Kód se nemění a funguje i bez migrace se stejným výsledkem; HTML stránek ve výchozím řazení je s indexem i bez něj stejné (řazení podle „Založeno“ je stejné jen při jedinečném `created_at`, `MIGRATION.md`, 5.3, **ověřit**). `MIGRATION.md`, 5.3.
+
 ## [2.8.2] – 2026-11-26
 
 ### Změněno
