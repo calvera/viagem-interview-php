@@ -8,7 +8,7 @@ Všechna data jsou syntetická, generují se při prvním startu databáze.
 
 - **Přehled** – počty záznamů, poslední poznámky, historie a poslední noční report.
 - **Vlastníci** – výpis s filtrem podle obce (textové pole s našeptávačem hledá část názvu, odkaz z výpisu obcí vybere přesně jednu obec podle id), typu a zákazu oslovení, hledání podle jména nebo IČO, detail s parcelami a podíly, poznámky, úprava údajů, export do CSV.
-- **Parcely** – výpis s filtrem podle obce (textové pole s našeptávačem hledá část názvu, odkaz „parcely“ z výpisu obcí vybere přesně jednu obec podle id) a druhu pozemku, hledání podle čísla parcely nebo kódu katastrálního území.
+- **Parcely** – výpis s filtrem podle obce (textové pole s našeptávačem hledá část názvu, odkaz „parcely“ z výpisu obcí vybere přesně jednu obec podle id) a druhu pozemku, hledání podle čísla parcely nebo kódu katastrálního území; vlastníci parcely seřazení podle příjmení, jména a id, čísla LV v pořadí vlastníků.
 - **Obce** – výpis s filtrem podle okresu a kraje a dvěma odkazy ve tvaru malých tlačítek: „vlastníci“ na vlastníky s obcí (`f_municipality_id`, přesně tato obec; nad výpisem vlastníků popisek „Obec: název ×“, sloupec „V obci“ s parcelami vlastníka v této obci) a „parcely“ na parcely obce (`f_municipality_id`, popisek „Obec: název ×“, počet se rovná sloupci „Parcel“).
 - **Noční report** – souhrnné statistiky do `reports/`, záznam do `report_runs` a odeslání na reportovací službu.
 
@@ -56,7 +56,7 @@ Kontrola „žádná PHP chyba“ hledá na stránce výpis fatální chyby a ch
 | Sada | Co ověřuje |
 | --- | --- |
 | `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování, ošetření buněk CSV proti vzorcům, parametry GET/POST, CSRF token…), skládání SQL v `Database::getWhere()`, parametry filtrů a hledání v `Section` (hodnota nikdy není v textu SQL), skrytý filtr `Section::addHiddenFilter()` a formátování buněk výpisu s `NULL`. Bez databáze. |
-| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, obec a počet parcel ve výpisu vlastníků (i vlastník bez parcel) a hodnoty „V obci“ s filtrem obce, odkaz „vlastníci“ z výpisu obcí a filtr podle id obce (počet vlastníků, popisek, „V obci“, neplatné id se ignoruje, export), odkaz „parcely“ a výpis parcel podle id obce (počet, popisek, druh pozemku, neplatné id se ignoruje), vlastníci a LV konkrétní parcely (i parcela bez vlastníka) a počet parcel konkrétní obce, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
+| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, obec a počet parcel ve výpisu vlastníků (i vlastník bez parcel) a hodnoty „V obci“ s filtrem obce, odkaz „vlastníci“ z výpisu obcí a filtr podle id obce (počet vlastníků, popisek, „V obci“, neplatné id se ignoruje, export), odkaz „parcely“ a výpis parcel podle id obce (počet, popisek, druh pozemku, neplatné id se ignoruje), vlastníci a LV konkrétní parcely (i parcela bez vlastníka) a pořadí vlastníků se stejným příjmením a jejich LV a počet parcel konkrétní obce, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
 | Playwright (`e2e/`) | Totéž v prohlížeči (Chromium) a navíc JavaScript a klikání: menu, filtry, řazení, stránkování, našeptávač obcí (popisek se vloží jako text, ne HTML), potvrzovací dialog mazání poznámky (vždy se zruší), stažení CSV. Po každém testu ověří, že v konzoli prohlížeče není chyba a na stránce není výpis fatální chyby ani chyby syntaxe. Test mazání poznámky navíc v prohlížeči zablokuje každý POST, takže poznámku nesmaže, ani kdyby potvrzovací dialog nefungoval. |
 
 Nejdřív spusťte aplikaci (`docker compose up -d`, viz výše) a migraci indexu (viz *Zrychlení výpisu vlastníků*). Smoke sada trvá asi 20 s na verzi, Playwright asi půl minuty pro obě verze.
@@ -86,7 +86,7 @@ APP_URL=http://localhost:8085 vendor/bin/phpunit --testsuite smoke
 cd e2e && npx playwright test --project=php85
 ```
 
-Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 137, smoke 70, Playwright 20 testů na každou verzi).
+Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 137, smoke 72, Playwright 20 testů na každou verzi).
 
 Skripty `composer test` a `composer test:smoke` spouští PHPUnit pod PHP hostitele (v image `php74` Composer není). Pro unit testy na PHP 7.4 proto použijte příkaz s `docker compose run` výše.
 
@@ -204,7 +204,7 @@ type=ref  key=idx_parcels_municipality  rows=128  Using index   (ANALYZE: r_rows
 
 #### Oprava
 
-- **Parcely:** `parcels_list_prepare()` (`Section::setRowsPrepareFunction()`) načte vlastníky všech parcel stránky jedním dotazem `parcels_owners()` (`where os.parcel_id in (…) order by os.parcel_id, o.last_name`). Každá parcela má vlastníky ve stejném pořadí jako dříve, kromě vlastníků se stejným příjmením, jejichž pořadí (a s ním pořadí čísel LV) bylo neurčené už dříve (viz *Chyby v logice* v TODO). HTML buňky dál skládá PHP (`owner_name()`, `h()`, `format_share()`).
+- **Parcely:** `parcels_list_prepare()` (`Section::setRowsPrepareFunction()`) načte vlastníky všech parcel stránky jedním dotazem `parcels_owners()` (`where os.parcel_id in (…)`, v2.7.10 `order by os.parcel_id, o.last_name`). Každá parcela měla vlastníky ve stejném pořadí jako dříve, kromě vlastníků se stejným příjmením, jejichž pořadí (a s ním pořadí čísel LV) bylo neurčené už dříve. Opraveno samostatně: dotaz řadí `o.last_name, o.first_name, o.id, os.id`, pořadí je jednoznačné (viz *Pořadí vlastníků se stejným příjmením*). HTML buňky dál skládá PHP (`owner_name()`, `h()`, `format_share()`).
 - **Obce:** počet parcel je korelovaný poddotaz v hlavním dotazu výpisu: `(select count(*) from parcels p where p.municipality_id = municipalities.id) as parcels`. MariaDB ho vyhodnotí jen pro řádky stránky (po řazení a `limit`), ne pro všech 6 250 obcí.
 - Nový index není potřeba: dávkový dotaz i poddotaz používají existující indexy `idx_ownerships_parcel` a `idx_parcels_municipality`.
 
@@ -247,7 +247,7 @@ Porovnáno `ANALYZE FORMAT=JSON` pro stranu 1, 63 a 125, s výchozím řazením 
 Část výpisu (informace o počtu, tabulka, stránkování) se uložila před změnou (dvakrát) a po ní, na PHP 7.4 i 8.5. Parcely: výchozí výpis, druh „orná půda“, filtr obce „Lhota“ (i 2. strana), hledání „st. 121“, řazení podle katastrálního území a výměry v obou směrech, 2. a poslední strana. Obce: výchozí výpis, okres, kraj (i poslední strana), hledání, řazení podle kódu, názvu, okresu a kraje, 2. a poslední strana.
 
 - **Obce:** bajtově shodné.
-- **Parcely:** shodné po seřazení vlastníků uvnitř buňky „Vlastníci“ a čísel v buňce „LV“. Pořadí vlastníků se stejným příjmením je neurčené už před změnou: dvě načtení stejné adresy před změnou se lišila (parcela 19020, tři vlastníci „Kratochvíl“ v jiném pořadí). Chyba je zapsaná v TODO (*Chyby v logice*), v této položce se neopravuje.
+- **Parcely:** shodné po seřazení vlastníků uvnitř buňky „Vlastníci“ a čísel v buňce „LV“. Pořadí vlastníků se stejným příjmením je neurčené už před změnou: dvě načtení stejné adresy před změnou se lišila (parcela 19020, tři vlastníci „Kratochvíl“ v jiném pořadí). V této položce se neopravovala, opravená je samostatně (*Pořadí vlastníků se stejným příjmením*).
 
 ### Odkaz „vlastníci“ podle id obce
 
@@ -283,7 +283,25 @@ p: type=ref  key=idx_parcels_municipality  rows=128  Using where   (ANALYZE: r_r
 m: type=const  key=PRIMARY
 ```
 
-Ověřeno na PHP 7.4 i 8.5: počet parcel pro id 1, 2018, 5256, 6250 se rovná `select count(*) from parcels where municipality_id = ?` i sloupci „Parcel“ (v generovaných datech má každá obec 128 parcel, proto i kombinace s druhem pozemku: Lhota a orná půda 18 podle SQL i stránky); neexistující id 999999 ukáže 0 parcel a popisek „999999“; všech 128 řádků Lhoty (3 strany) má obec Lhota. HTML 62 stránek (31 adres × 2 verze PHP) je před a po změně shodné: 13 výpisů parcel bez nového filtru (výchozí, druh, textový filtr „Lhota“ i s 2. stranou a s neexistujícím druhem (prázdný výpis), hledání, řazení podle katastrálního území a výměry v obou směrech, 2. a poslední strana, neplatné id) po seřazení vlastníků v buňce „Vlastníci“ a čísel v buňce „LV“ (neurčené pořadí vlastníků se stejným příjmením, viz *Chyby v logice* v TODO), 9 výpisů vlastníků (i s filtrem podle id) bajtově, 9 výpisů obcí bajtově kromě buňky s odkazy. Počet SQL dotazů v patičce je na všech těchto stránkách stejný jako před změnou.
+Ověřeno na PHP 7.4 i 8.5: počet parcel pro id 1, 2018, 5256, 6250 se rovná `select count(*) from parcels where municipality_id = ?` i sloupci „Parcel“ (v generovaných datech má každá obec 128 parcel, proto i kombinace s druhem pozemku: Lhota a orná půda 18 podle SQL i stránky); neexistující id 999999 ukáže 0 parcel a popisek „999999“; všech 128 řádků Lhoty (3 strany) má obec Lhota. HTML 62 stránek (31 adres × 2 verze PHP) je před a po změně shodné: 13 výpisů parcel bez nového filtru (výchozí, druh, textový filtr „Lhota“ i s 2. stranou a s neexistujícím druhem (prázdný výpis), hledání, řazení podle katastrálního území a výměry v obou směrech, 2. a poslední strana, neplatné id) po seřazení vlastníků v buňce „Vlastníci“ a čísel v buňce „LV“ (tehdy neurčené pořadí vlastníků se stejným příjmením, opravené v *Pořadí vlastníků se stejným příjmením*), 9 výpisů vlastníků (i s filtrem podle id) bajtově, 9 výpisů obcí bajtově kromě buňky s odkazy. Počet SQL dotazů v patičce je na všech těchto stránkách stejný jako před změnou.
+
+### Pořadí vlastníků se stejným příjmením
+
+Buňka „Vlastníci“ ve výpisu parcel řadila vlastníky jen podle příjmení (`order by os.parcel_id, o.last_name`), pořadí vlastníků se stejným příjmením bylo neurčené a s ním i pořadí čísel v buňce „LV“ (skládá se v pořadí vlastníků). Dvě načtení `index.php?url=parcels&search=st.%20121` ukázala tři vlastníky „Kratochvíl“ parcely 19020 pokaždé v jiném pořadí (viz TODO); 13 adres výpisu načtených 10× (5× na každé verzi PHP) dalo u 6 adres 2 až 4 různé verze HTML.
+
+`parcels_owners()` teď řadí `os.parcel_id, o.last_name, o.first_name, o.id, os.id`. Jméno a id vlastníka určují pořadí jednoznačně; `os.id` je poslední klíč, protože tabulka `ownerships` nemá unikátní klíč `(parcel_id, owner_id)` a stejný vlastník by mohl být u parcely dvakrát (v datech 0 případů, osiřelé vztahy také 0). Příjmení zůstává prvním klíčem, takže pořadí různých příjmení se nemění.
+
+```
+explain select os.parcel_id, o.id, … where os.parcel_id in (…50 id…) order by os.parcel_id, o.last_name, o.first_name, o.id, os.id;
+os: type=range  key=idx_ownerships_parcel  rows=93  Using index condition; Using temporary; Using filesort   (ANALYZE: r_rows=73)
+o:  type=eq_ref key=PRIMARY
+```
+
+Plán je stejný jako s `o.last_name`: dočasná tabulka a filesort byly i dříve, řadí se asi 70 řádků na stránku.
+
+Ověřeno na PHP 7.4 i 8.5 na 13 adresách výpisu parcel (výchozí výpis, druh, textový filtr „Lhota“ i s 2. stranou, filtr podle id obce, hledání „st. 121“ i poslední strana, řazení podle katastrálního území a výměry v obou směrech, 2. a poslední strana): 3 načtení na každé verzi jsou bajtově shodná a 7.4 se rovná 8.5. Po seřazení vlastníků a čísel LV uvnitř buněk se stránky rovnají stavu před změnou, mění se jen pořadí uvnitř shod. Např. parcela 35 má dvě vlastnice „Černá“ s jiným LV: dříve „883, 1589“ (MUDr. Martina), teď „1589, 883“ (Eva před Martinou).
+
+Detail vlastníka (`owner_parcels()`) a řazení výpisů podle sloupce mají podobné shody v klíči řazení, zatím bez projevu; jsou zapsané v TODO (*Chyby v logice*).
 
 ## Struktura
 

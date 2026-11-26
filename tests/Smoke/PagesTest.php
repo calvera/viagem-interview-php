@@ -379,6 +379,71 @@ class PagesTest extends TestCase
   }
 
   /**
+   * Owners with the same last name are ordered by first name and owner id, and the LV numbers follow the owners.
+   * Parcel 19020 has three owners "Kratochvíl" (two "Václav"), parcel 35 two owners "Černá" with different LVs,
+   * so the tie decides the order of the LV numbers. Order from the database:
+   * `ownerships where parcel_id = ? order by last_name, first_name, owner id, ownership id`.
+   *
+   * @dataProvider parcelOwnerTiesProvider
+   */
+  public function testParcelOwnersWithSameLastName($path, $row_start, $lv, $owners)
+  {
+    $links = array();
+    foreach ($owners as $o)
+    {
+      $links[] = '<a href="index.php?url=owners/detail&amp;id=' . $o[0] . '">' . $o[1] . '</a> <small>(' . $o[2] . ')</small>';
+    }
+
+    $response = $this->get($path);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString($row_start . '<td class="col_string">' . $lv . '</td>', $response['body']);
+    $this->assertStringContainsString('<td class="col_html">' . implode('<br>', $links) . '</td></tr>', $response['body']);
+  }
+
+  public function parcelOwnerTiesProvider()
+  {
+    return array(
+      'parcel 19020' => array(
+        '/index.php?url=parcels&search=st.%20121',
+        '<tr><td class="col_string">Jedlinka pod Horou</td><td class="col_string">Jedlinka pod Horou – Zálesí</td><td class="col_string">st. 121</td>',
+        '554, 1538',
+        array(
+          array(24940, 'Radek Dvořák', '1/6'),
+          array(444940, 'Radek Dvořák', '1/3'),
+          array(204940, 'Radek Kratochvíl', '1/6'),
+          array(64940, 'Václav Kratochvíl', '1/3'),
+          array(484940, 'Václav Kratochvíl', '1/2'),
+          array(144940, 'Radek Kříž', '1/6'),
+          array(4940, 'Václav Kříž', '1/3'),
+          array(184940, 'Václav Navrátil', '1/3'),
+          array(104940, 'Pastviny Lipnice s.r.o.', '1/2'),
+          array(464940, 'Pastviny Lipnice s.r.o.', '1/6'),
+          array(124940, 'Václav Pokorný', '1/3'),
+          array(164940, 'Pozemkový spolek Klenovka s.r.o.', '1/2'),
+          array(382232, 'Vladimír Procházka', '1/6'),
+          array(84940, 'Radek Růžička', '1/6'),
+          array(44940, 'Statek Bukovina s.r.o.', '1/2'),
+          array(224940, 'Statek Bukovina s.r.o.', '1/2'),
+        ),
+      ),
+      'parcel 35' => array(
+        '/index.php?url=parcels',
+        '<tr><td class="col_string">Velká Jedlinka na Výsluní</td><td class="col_string">Velká Jedlinka na Výsluní</td><td class="col_string">246</td>',
+        '1589, 883',
+        array(
+          array(442145, 'Eva Černá', '1/4'),
+          array(307467, 'MUDr. Martina Černá', '1/2'),
+          array(7467, 'Martina Kovářová', '1/4'),
+          array(342145, 'Jaroslava Kratochvílová', 'celý'),
+          array(242145, 'Ing. Markéta Šimková', '1/2'),
+        ),
+      ),
+    );
+  }
+
+  /**
    * Parcel 1 (first row of the default page) has no owner.
    */
   public function testParcelWithoutOwner()

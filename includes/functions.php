@@ -291,7 +291,9 @@ function owners_parcels_in_municipality($owner_ids, $municipality_id)
 
 /**
  * Owners of the parcels with share and LV number, grouped by parcel id, in one query.
- * Each parcel's owners are ordered by last name, as in the parcels list before.
+ * Each parcel's owners are ordered by last name, then first name and owner id, so owners
+ * with the same name keep a stable order (and with them the LV numbers in the list).
+ * Ownership id is the last key, because the schema allows one owner twice on a parcel.
  */
 function parcels_owners($parcel_ids)
 {
@@ -302,7 +304,7 @@ function parcels_owners($parcel_ids)
     from ownerships os
     left join owners o on o.id = os.owner_id
     where os.parcel_id in (" . sql_int_list($parcel_ids) . ")
-    order by os.parcel_id, o.last_name");
+    order by os.parcel_id, o.last_name, o.first_name, o.id, os.id");
   if (!$res) return $list;
 
   while ($r = $res->fetch_assoc()) $list[$r['parcel_id']][] = $r;

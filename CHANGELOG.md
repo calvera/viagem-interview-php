@@ -4,6 +4,17 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.8.1] – 2026-11-26
+
+### Opraveno
+
+- Výpis parcel: pořadí vlastníků se stejným příjmením v buňce „Vlastníci“ a s ním pořadí čísel v buňce „LV“ bylo neurčené, dvě načtení stejné adresy se mohla lišit (parcela 19020, tři vlastníci „Kratochvíl“). `parcels_owners()` v `includes/functions.php` řadí `o.last_name, o.first_name, o.id, os.id`, docblock popisuje i shody. Opakovaná načtení jsou bajtově shodná, PHP 7.4 i 8.5 stejně; mění se jen pořadí uvnitř shod (např. parcela 35: LV `1589, 883` místo `883, 1589`). Plán dotazu beze změny.
+
+### Přidáno
+
+- Smoke test pořadí vlastníků a LV u parcel 19020 a 35.
+- `TODO.md`: neurčené pořadí řádků se shodným klíčem v detailu vlastníka (`owner_parcels()`) a při řazení výpisů podle sloupce (*Chyby v logice*).
+
 ## [2.8.0] – 2026-11-26
 
 ### Přidáno
