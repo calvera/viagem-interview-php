@@ -4,6 +4,21 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.8.2] – 2026-11-26
+
+### Změněno
+
+- Migrace v `sql/migrations/` mají pořadové číslo, pořadí podle názvu je pořadí spuštění: `2026-11-26_ownerships_owner_id.sql` je teď `001_ownerships_owner_id.sql`.
+- Výchozí řazení výpisu vlastníků (a exportu CSV) je `o.last_name, o.first_name, o.id` místo `concat(o.last_name, ' ', o.first_name)` (`setSortBy()` v `admin_owners/owners_functions.php`, rozhodnutí z otázky 5 v `OPENQUESTIONS.md`, varianta b). S vyplněným hledáním se řadí `o.id + 0` místo `o.id` (stejné pořadí), aby hledání zůstalo u dosavadního plánu: s indexem by vzácné jméno četlo skoro celý index. Pořadí je jednoznačné: vlastníci se stejným jménem jsou seřazení podle id, na stranách jsou proto jiní vlastníci než dříve. Posloupnost jmen se na celých testovacích datech nezměnila (všech 1 070 jmen ve stejném pořadí). Opakovaná načtení jsou bajtově shodná, PHP 7.4 i 8.5 stejně; výpisy parcel a obcí beze změny.
+
+### Přidáno
+
+- SQL migrace `sql/migrations/002_owners_name.sql`: index `idx_owners_name (last_name, first_name, id)` (idempotentní, online) a `ANALYZE TABLE owners` s histogramy sloupců `type`, `ico`, `municipality_id`, `do_not_contact`. První strany výpisu se čtou z indexu (bez filtru 50 řádků místo 500 000 a filesortu); s histogramy zůstane filtr podle id obce, hledání IČO a kombinace typu a zákazu oslovení na dalších stranách u průchodu tabulkou místo čtení celého indexu. Kód funguje i bez migrace se stejným výsledkem.
+- `ANALYZE TABLE ownerships` na konci migrace `001_ownerships_owner_id.sql` (statistiky pro optimalizátor, opakované spuštění neškodí).
+- Obě migrace nastaví pro svou relaci `sql_mode = ''` jako aplikace: se striktním režimem a `NO_ZERO_DATE` skončil `ALTER TABLE owners` chybou 1067 (výchozí hodnoty s nulovým datem).
+- `MIGRATION.md`: přehled DB migrací (soubor, verze, co dělá, povinnost, kdy vůči nahrání souborů, návrat, doba) a společné zásady; kapitola 5 přestavěná podle něj.
+- Smoke test: vlastníci se stejným jménem na 1. a 5000. straně výpisu jsou ve vzestupném pořadí id.
+
 ## [2.8.1] – 2026-11-26
 
 ### Opraveno

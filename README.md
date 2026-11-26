@@ -7,7 +7,7 @@ Všechna data jsou syntetická, generují se při prvním startu databáze.
 ## Funkce
 
 - **Přehled** – počty záznamů, poslední poznámky, historie a poslední noční report.
-- **Vlastníci** – výpis s filtrem podle obce (textové pole s našeptávačem hledá část názvu, odkaz z výpisu obcí vybere přesně jednu obec podle id), typu a zákazu oslovení, hledání podle jména nebo IČO, detail s parcelami a podíly, poznámky, úprava údajů, export do CSV.
+- **Vlastníci** – výpis s filtrem podle obce (textové pole s našeptávačem hledá část názvu, odkaz z výpisu obcí vybere přesně jednu obec podle id), typu a zákazu oslovení, hledání podle jména nebo IČO, řazení podle příjmení, jména a id (nebo data založení), detail s parcelami a podíly, poznámky, úprava údajů, export do CSV.
 - **Parcely** – výpis s filtrem podle obce (textové pole s našeptávačem hledá část názvu, odkaz „parcely“ z výpisu obcí vybere přesně jednu obec podle id) a druhu pozemku, hledání podle čísla parcely nebo kódu katastrálního území; vlastníci parcely seřazení podle příjmení, jména a id, čísla LV v pořadí vlastníků.
 - **Obce** – výpis s filtrem podle okresu a kraje a dvěma odkazy ve tvaru malých tlačítek: „vlastníci“ na vlastníky s obcí (`f_municipality_id`, přesně tato obec; nad výpisem vlastníků popisek „Obec: název ×“, sloupec „V obci“ s parcelami vlastníka v této obci) a „parcely“ na parcely obce (`f_municipality_id`, popisek „Obec: název ×“, počet se rovná sloupci „Parcel“).
 - **Noční report** – souhrnné statistiky do `reports/`, záznam do `report_runs` a odeslání na reportovací službu.
@@ -56,10 +56,10 @@ Kontrola „žádná PHP chyba“ hledá na stránce výpis fatální chyby a ch
 | Sada | Co ověřuje |
 | --- | --- |
 | `unit` (PHPUnit, `tests/Unit`) | Pomocné funkce z `includes/functions.php` (formátování data, výměry, podílu, jména vlastníka, IČO, escapování, ošetření buněk CSV proti vzorcům, parametry GET/POST, CSRF token…), skládání SQL v `Database::getWhere()`, parametry filtrů a hledání v `Section` (hodnota nikdy není v textu SQL), skrytý filtr `Section::addHiddenFilter()` a formátování buněk výpisu s `NULL`. Bez databáze. |
-| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, obec a počet parcel ve výpisu vlastníků (i vlastník bez parcel) a hodnoty „V obci“ s filtrem obce, odkaz „vlastníci“ z výpisu obcí a filtr podle id obce (počet vlastníků, popisek, „V obci“, neplatné id se ignoruje, export), odkaz „parcely“ a výpis parcel podle id obce (počet, popisek, druh pozemku, neplatné id se ignoruje), vlastníci a LV konkrétní parcely (i parcela bez vlastníka) a pořadí vlastníků se stejným příjmením a jejich LV a počet parcel konkrétní obce, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
+| `smoke` (PHPUnit, `tests/Smoke`) | HTTP požadavky na běžící aplikaci (`APP_URL`): každá stránka vrátí 200, správný nadpis a žádnou fatální chybu ani chybu syntaxe; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, obří číslo strany (ukáže poslední stranu), našeptávač (JSON), 404, parametry jako pole (`url[]`, `search[]`, `sort[]`, `q[]`), vynechání vlastníků se zákazem oslovení v exportu, obec a počet parcel ve výpisu vlastníků (i vlastník bez parcel) a hodnoty „V obci“ s filtrem obce, odkaz „vlastníci“ z výpisu obcí a filtr podle id obce (počet vlastníků, popisek, „V obci“, neplatné id se ignoruje, export), odkaz „parcely“ a výpis parcel podle id obce (počet, popisek, druh pozemku, neplatné id se ignoruje), vlastníci a LV konkrétní parcely (i parcela bez vlastníka) a pořadí vlastníků se stejným příjmením a jejich LV, vlastníci se stejným jménem ve výpisu vlastníků podle id a počet parcel konkrétní obce, hodnoty jako `x' or '1'='1` ve filtrech, hledání a našeptávači nic nenajdou, `<script>` v hledání a filtru je escapovaný, GET `?delete_note=` nic nesmaže. Bez `APP_URL` se přeskočí. |
 | Playwright (`e2e/`) | Totéž v prohlížeči (Chromium) a navíc JavaScript a klikání: menu, filtry, řazení, stránkování, našeptávač obcí (popisek se vloží jako text, ne HTML), potvrzovací dialog mazání poznámky (vždy se zruší), stažení CSV. Po každém testu ověří, že v konzoli prohlížeče není chyba a na stránce není výpis fatální chyby ani chyby syntaxe. Test mazání poznámky navíc v prohlížeči zablokuje každý POST, takže poznámku nesmaže, ani kdyby potvrzovací dialog nefungoval. |
 
-Nejdřív spusťte aplikaci (`docker compose up -d`, viz výše) a migraci indexu (viz *Zrychlení výpisu vlastníků*). Smoke sada trvá asi 20 s na verzi, Playwright asi půl minuty pro obě verze.
+Nejdřív spusťte aplikaci (`docker compose up -d`, viz výše) a DB migrace (viz *Zrychlení výpisu vlastníků*). Smoke sada trvá asi 20 s na verzi, Playwright asi půl minuty pro obě verze.
 
 PHP 7.4:
 
@@ -86,7 +86,7 @@ APP_URL=http://localhost:8085 vendor/bin/phpunit --testsuite smoke
 cd e2e && npx playwright test --project=php85
 ```
 
-Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 137, smoke 72, Playwright 20 testů na každou verzi).
+Všechny sady jsou zelené na PHP 7.4 i 8.5 (unit 137, smoke 74, Playwright 20 testů na každou verzi).
 
 Skripty `composer test` a `composer test:smoke` spouští PHPUnit pod PHP hostitele (v image `php74` Composer není). Pro unit testy na PHP 7.4 proto použijte příkaz s `docker compose run` výše.
 
@@ -136,10 +136,10 @@ Název obce (`where id = …`) je `const`, levný, ale také jeden dotaz na řá
 ### Oprava
 
 - `Section::setRowsPrepareFunction()`: funkce, kterou výpis zavolá jednou se všemi řádky stránky. `owners_list_prepare()` v ní načte názvy obcí, počty parcel a s filtrem obce parcely pro „V obci“ třemi dotazy `in (…)`. Sloupec „V obci“ se dál počítá v PHP stejným `mb_stripos` (porovnání `LIKE` s kolací `utf8mb4_czech_ci` by mohlo najít jiné obce).
-- Index `idx_ownerships_owner` na `ownerships.owner_id` jako SQL migrace [`sql/migrations/2026-11-26_ownerships_owner_id.sql`](sql/migrations/2026-11-26_ownerships_owner_id.sql), nasazení v [MIGRATION.md](MIGRATION.md), kapitola 5. Lokálně ji po prvním startu Dockeru (a po každém `docker compose down -v`) spusťte ručně:
+- Index `idx_ownerships_owner` na `ownerships.owner_id` jako SQL migrace [`sql/migrations/001_ownerships_owner_id.sql`](sql/migrations/001_ownerships_owner_id.sql), nasazení v [MIGRATION.md](MIGRATION.md), kapitola 5 (přehled všech DB migrací). Lokálně je po prvním startu Dockeru (a po každém `docker compose down -v`) spusťte ručně, v pořadí podle názvu:
 
   ```bash
-  docker compose exec -T db mariadb -ucrm -pcrm legacy_crm --show-warnings < sql/migrations/2026-11-26_ownerships_owner_id.sql
+  for f in sql/migrations/*.sql; do docker compose exec -T db mariadb -ucrm -pcrm legacy_crm --show-warnings < "$f"; done
   ```
 
 ### Před a po
@@ -173,7 +173,7 @@ Chování se nezměnilo: HTML výpisu (informace o počtu, tabulka, stránkován
 
 ### Co zůstává
 
-Hlavní dotaz a `count(*)` se nezměnily:
+Hlavní dotaz a `count(*)` se touto opravou nezměnily (stav před *Výchozím řazením vlastníků* níže):
 
 ```
 explain select count(*) from owners o;                                  type=index  key=PRIMARY  rows=495922  Using index
@@ -182,7 +182,7 @@ explain select o.* from owners o order by concat(o.last_name, ' ', o.first_name)
 explain … left join municipalities m … where m.name like '%Lhota%' …;   o: type=ALL  rows=495922
 ```
 
-- **Výchozí řazení** podle `concat(…)` nemůže použít index, každá strana řadí všech 500 tisíc vlastníků. Změna řazení ale změní, kteří vlastníci jsou na které straně: 500 tis. vlastníků má jen 1 070 různých jmen a pořadí uvnitř jména je neurčené. Proto zůstává beze změny jako otázka 5 v [OPENQUESTIONS.md](OPENQUESTIONS.md).
+- **Výchozí řazení** podle `concat(…)` nemůže použít index, každá strana řadí všech 500 tisíc vlastníků. Změna řazení ale změní, kteří vlastníci jsou na které straně: 500 tis. vlastníků má jen 1 070 různých jmen a pořadí uvnitř jména je neurčené. Proto zůstalo beze změny jako otázka 5 v [OPENQUESTIONS.md](OPENQUESTIONS.md); po rozhodnutí viz *Výchozí řazení vlastníků* níže.
 - **`count(*)`** je jeden průchod indexem za stránku a výpis ukazuje přesný počet, proto beze změny.
 - **Filtr obce** hledá podřetězec přes všechny vlastníky (`ALL`). Odkaz z výpisu obcí filtruje podle id (viz *Odkaz „vlastníci“ podle id obce* níže), ale i tak prochází všechny vlastníky. Index na `owners.municipality_id` záměrně není: změní plán dotazu a výpis „Lhota“ pak na 1. straně ukáže jiné vlastníky se stejným jménem (ověřeno dočasným indexem). Filtr je samostatná položka v TODO (*Výkon*) a otázka 1 v OPENQUESTIONS.
 - N+1 ve výpisu parcel a obcí: viz *Výpis parcel a obcí* níže.
@@ -302,6 +302,55 @@ Plán je stejný jako s `o.last_name`: dočasná tabulka a filesort byly i dří
 Ověřeno na PHP 7.4 i 8.5 na 13 adresách výpisu parcel (výchozí výpis, druh, textový filtr „Lhota“ i s 2. stranou, filtr podle id obce, hledání „st. 121“ i poslední strana, řazení podle katastrálního území a výměry v obou směrech, 2. a poslední strana): 3 načtení na každé verzi jsou bajtově shodná a 7.4 se rovná 8.5. Po seřazení vlastníků a čísel LV uvnitř buněk se stránky rovnají stavu před změnou, mění se jen pořadí uvnitř shod. Např. parcela 35 má dvě vlastnice „Černá“ s jiným LV: dříve „883, 1589“ (MUDr. Martina), teď „1589, 883“ (Eva před Martinou).
 
 Detail vlastníka (`owner_parcels()`) a řazení výpisů podle sloupce mají podobné shody v klíči řazení, zatím bez projevu; jsou zapsané v TODO (*Chyby v logice*).
+
+### Výchozí řazení vlastníků
+
+Výpis vlastníků i export CSV se ve výchozím stavu řadily `concat(o.last_name, ' ', o.first_name)`. Na výraz nejde použít index, takže každá strana přečetla a seřadila všech 500 tisíc vlastníků, a pořadí vlastníků se stejným jménem (1 070 jmen na 500 tis. vlastníků) bylo neurčené. Podle rozhodnutí zadavatele (otázka 5 v [OPENQUESTIONS.md](OPENQUESTIONS.md), varianta b) se řadí `o.last_name, o.first_name, o.id` (s vyplněným hledáním `o.id + 0`, viz *Hledání* níže) a přibyl index `idx_owners_name (last_name, first_name, id)` jako SQL migrace [`sql/migrations/002_owners_name.sql`](sql/migrations/002_owners_name.sql) (nasazení v [MIGRATION.md](MIGRATION.md), 5.2).
+
+**Pořadí jmen.** Před změnou se porovnalo pořadí celé tabulky: posloupnost jmen (příjmení, jméno) při řazení `concat()` a při řazení podle sloupců je pro všech 1 070 jmen stejná, rozdíl 0. Rozdíl by vznikl jen u osoby, jejíž příjmení je prvním slovem názvu firmy (`concat` řadí „Nový Agro“ před „Nový Zdeněk“, sloupce osobu před firmu), nebo u `first_name = NULL` (`concat` je pak `NULL` a řádek je na začátku). V testovacích datech nic takového není (právnické osoby mají prázdné `first_name` a název začíná slovem jako „Agro“, „Statek“…, které žádná osoba nemá jako příjmení). Uvnitř jména se teď řadí podle id, a to je jediná změna výpisu.
+
+**Plány.** `ANALYZE` hlavního dotazu stránky (MariaDB 10.11), před = řazení `concat()` bez indexu, po = nové řazení s indexem a histogramy. „Stránky“ jsou čtení stránek z buffer poolu (`Innodb_buffer_pool_read_requests`), měřítko práce bez měření času.
+
+| Dotaz (strana 50 řádků) | před | po |
+| --- | --- | --- |
+| bez filtru, 1. strana | `ALL` + filesort, 500 000 řádků, 3 983 stránek | `index` `idx_owners_name`, 50 řádků, 153 stránek |
+| bez filtru, 2. / 10. / 50. strana | `ALL` + filesort, 500 000 řádků | `index`, 100 / 500 / 2 500 řádků |
+| bez filtru, 100., 5000. a poslední (10 000.) strana | `ALL` + filesort | beze změny (`ALL` + filesort), optimalizátor přechází na filesort mezi 70. a 80. stranou |
+| typ P, 1. strana | `ALL` + filesort | `index`, 50 řádků |
+| typ P, poslední strana (834.) | `ALL` + filesort | beze změny |
+| typ F / neoslovovat, 1. strana | `ALL` + filesort | `index`, 3 522 / 1 682 řádků |
+| typ P + neoslovovat, 1. / poslední (28.) strana | `ALL` + filesort | `index` 1 682 řádků / beze změny (díky histogramům) |
+| neoslovovat 10. / 30. / 60. strana | `ALL` + filesort, 5 339 / 8 345 / 12 856 stránek, ANALYZE 145 / 145 / 182–266 ms | **víc stránek:** `index`, 14 / 44 / 88 tis. řádků, 43 / 132 / 265 tis. stránek, ANALYZE 44 / 103 / 215–291 ms |
+| neoslovovat 70., 100., 200. a poslední (342.) strana | `ALL` + filesort | beze změny (optimalizátor přechází mezi 60. a 70. stranou) |
+| typ F + neoslovovat 20. / 50. strana, od 60. strany | `ALL` + filesort, 6 835 / 11 348 stránek | `index`, 97 / 230 tis. stránek, ANALYZE 93 / 187 ms proti 179 / 191 ms; od 60. strany beze změny |
+| hledání („Nov“, „Agro Lhota“, „Svobodová“ i 3. strana, bez výsledku, s typem) | `ALL` + filesort, asi 4 tis. stránek | beze změny (`o.id + 0`, viz *Hledání*) |
+| hledání IČO | `ALL` + filesort | beze změny (díky histogramu `ico`) |
+| textový filtr obce „Lhota“, 1. strana | `o`: `ALL` + filesort, `m`: `eq_ref` | `o`: `index`, 1 219 řádků |
+| textový filtr obce „Zadní Ves v Údolí“ (80 vlastníků) | `ALL` + filesort, 1,47 mil. stránek | `index`, 292 tis. řádků, 1,46 mil. stránek (bez zlepšení) |
+| filtr podle id obce (`f_municipality_id`) | `ALL` + filesort | beze změny (díky histogramu `municipality_id`) |
+
+```
+analyze select o.* from owners o order by concat(o.last_name, ' ', o.first_name) asc limit 0, 50;
+before: type=ALL    rows=496497  r_rows=50   Using filesort        (Handler_read_rnd_next=500001)
+analyze select o.* from owners o order by o.last_name, o.first_name, o.id asc limit 0, 50;
+after:  type=index  key=idx_owners_name  rows=500000  r_rows=50   (Handler_read_next=49, žádný filesort)
+```
+
+`count(*)` se nemění, je to dál jeden průchod: bez filtru a s hledáním čte nový index (`Using index`, 1 059 stránek indexu místo 3 878 primárního klíče), s typem a filtry obce celou tabulku (`ALL`) jako dříve.
+
+S filtrem čte index na prvních stranách o něco víc stránek z buffer poolu než dřívější průchod tabulkou (asi 4 tis. stránek), protože pro každý přečtený záznam indexu dohledá řádek podle id: typ F 1. strana 10 576 (2,7×), „neoslovovat“ 1. strana 5 052 (1,3×), 2. až 4. strana 9 097 / 13 806 / 17 281 (2,2× až 3,9×), typ P + „neoslovovat“ 1. strana 5 052 (1,3×). Doba podle `ANALYZE` je tam mnohem nižší (7 až 57 ms místo 140 až 380 ms, bez řazení 500 tis. řádků). Filtr „neoslovovat“ (17 091 vlastníků, 3,4 %, sám i s typem F) čte na 5. až 60. straně mnohonásobně víc: 4,7× až 21× (60. strana 265 tis. stránek místo 13 tis.). Doba je tam do 30. strany nižší, na 40. až 60. straně zhruba stejná, od 70. strany se plán vrací k průchodu tabulkou. S chladným buffer poolem na produkci by mohla být horší (náhodná čtení místo jednoho průchodu tabulkou).
+
+Hodnoty ANALYZE v ms jsou jen orientační, stejný plán se mezi běhy liší až dvakrát; porovnání stojí na plánu, řádcích a stránkách.
+
+**Kde index nepomáhá.** Vzdálené strany (od zhruba 75.) mají velký OFFSET a optimalizátor správně volí průchod tabulkou a seřazení; přeskočené řádky se čtou tak jako tak. Filtry na sloupce bez indexu (typ na poslední straně, id obce, IČO) a hledání dál procházejí celou tabulku. Textový filtr obce s málo vlastníky („Zadní Ves v Údolí“) čte přes index 292 tis. řádků, stránek zhruba stejně jako dříve (join s obcí byl i dříve pro každý řádek).
+
+**Hledání.** S indexem pro řazení četlo hledání vzácného jména skoro celý index: „Svobodová“ 408 tis. řádků a 1,2 mil. stránek místo 4 tis., hledání bez výsledku 1,5 mil. Podmínku `like '%…%'` optimalizátor odhadnout neumí (histogramy na `last_name`, `first_name` ověřeny, nepomohou) a předpokládá, že 50 výsledků najde hned na začátku indexu. S vyplněným hledáním proto `owners_build_section()` řadí `o.last_name, o.first_name, o.id + 0`: pořadí je stejné (id jako číslo), ale výraz nejde číst z indexu, takže plán je průchod tabulkou a filesort jako dříve. Hint `IGNORE INDEX FOR ORDER BY (idx_owners_name)` by udělal totéž, ale na databázi bez migrace je chyba SQL (`1176 Key 'idx_owners_name' doesn't exist`), kód by pak bez indexu nefungoval. Běžná hledání („Nov“) tím o zrychlení z indexu přišla, horší než dříve ale není žádné. `Section` se nemění.
+
+**Proč histogramy.** S indexem, ale bez histogramů optimalizátor předpokládal, že podmínce `o.municipality_id = 1` nebo `o.ico = '…'` odpovídá každý řádek (`filtered = 100`), a zvolil čtení indexu v pořadí jmen: filtr podle id obce přečetl 180 tis. až 500 tis. řádků (0,5 až 1,5 mil. stránek), hledání IČO 500 tis. (1,5 mil. stránek), místo 4 tis. stránek průchodu tabulkou. Prostý `ANALYZE TABLE` histogramy v MariaDB 10.11 nesbírá (`use_stat_tables = PREFERABLY_FOR_QUERIES`), migrace proto spouští `ANALYZE TABLE owners PERSISTENT FOR COLUMNS (type, ico, municipality_id, do_not_contact) INDEXES ()`. Stejně typ P se zákazem oslovení (1 367 vlastníků) na 28. straně: bez histogramů index, 500 tis. řádků a 1,5 mil. stránek, s histogramy průchod tabulkou jako dříve (7 950 stránek). S nimi optimalizátor zná selektivitu (`filtered = 0.02` u obce) a pro tyto filtry zůstane u dnešního plánu. Po opravě hledání jsou tedy histogramy pořád potřeba. Histogramy na `last_name` a `first_name` hledání nepomohly (ověřeno), proto v migraci nejsou.
+
+**Export CSV** používá stejnou `Section` (`getRows(false)`, limit 20 000) a stejné řazení (s hledáním také `o.id + 0`): plán beze změny (`o`: `ALL` + filesort, `m`: `eq_ref`), i s filtrem typu, hledáním a id obce. Pořadí jmen je stejné, uvnitř jména podle id, takže u exportu nad 20 000 řádků je na hranici limitu jiný výběr vlastníků se stejným jménem.
+
+**Chování.** Ověřeno na PHP 7.4 i 8.5 na 20 adresách výpisu vlastníků (výchozí výpis, 2., 5000. a poslední strana, typ P i 2. a poslední strana, typ F, neoslovovat, hledání „Nov“ a „Svobodová“ i 3. strana, IČO, textový filtr „Lhota“ i 2. strana, id obce 1 i 5. strana a 2018, řazení podle založení v obou směrech) a 4 exportech (výchozí, typ P, id obce, hledání): posloupnost jmen (příjmení, jméno) je na každé stránce stejná jako před změnou, vlastníci se stejným jménem jsou ve vzestupném pořadí id, mimo tabulku řádků (počet, stránkování, filtry) je HTML bajtově shodné. Řazení podle založení, IČO a id obce 2018 jsou bajtově shodné celé. Dvě načtení na každé verzi a 7.4 proti 8.5 jsou bajtově shodná, s indexem i bez něj (řazení je jednoznačné). Výpisy parcel (6 adres) a obcí (4 adresy) jsou bajtově shodné se stavem před změnou. Stránka má dál 5 SQL dotazů (s filtrem obce 6, podle id 7).
 
 ## Struktura
 

@@ -32,7 +32,14 @@ function owners_build_section(?Section $section = null, $for_export = false)
   }
   $section->setSearch(array('o.last_name', 'o.first_name'), $search);
 
-  $section->setSortBy("concat(o.last_name, ' ', o.first_name)", 'asc');
+  // Columns instead of concat(): the page is read from index idx_owners_name (last_name, first_name, id),
+  // id makes the order unique (OPENQUESTIONS.md, question 5). Changing this sort breaks the use of the index.
+  // With a search text the optimizer cannot estimate like '%…%' and would read almost the whole index for
+  // a rare name; "o.id + 0" gives the same order but cannot come from the index, so the search keeps the
+  // scan with filesort (no index hint: it would be an SQL error before the migration has run).
+  // Section appends the direction only after the last column, so the default stays 'asc'.
+  $id = $section->search_value !== '' ? 'o.id + 0' : 'o.id';
+  $section->setSortBy('o.last_name, o.first_name, ' . $id, 'asc');
 
   return $section;
 }

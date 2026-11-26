@@ -302,6 +302,33 @@ class PagesTest extends TestCase
     $this->assertStringNotContainsString('V obci', $response['body']);
   }
 
+  /**
+   * Default sort of the owners list: last name, first name and owner id, so owners with the same name are in
+   * ascending id order. Page 1 has only "Agro Borovnice v.o.s." (139 owners), page 5000 only "Marie Marková",
+   * with and without the title (the title is not part of the sort). Ids from the database:
+   * `select id from owners order by last_name, first_name, id limit <offset>, 50`.
+   *
+   * @dataProvider defaultSortTiesProvider
+   */
+  public function testOwnersWithSameNameAreInIdOrder($path, $name, $first_id, $step)
+  {
+    $response = $this->get($path);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    preg_match_all('~<td class="col_html"><a href="index.php\?url=owners/detail&amp;id=(\d+)">((?:[^<]+ )?' . preg_quote($name, '~') . ')</a>~u', $response['body'], $m);
+
+    $this->assertSame(range($first_id, $first_id + 49 * $step, $step), array_map('intval', $m[1]));
+  }
+
+  public function defaultSortTiesProvider()
+  {
+    return array(
+      'page 1' => array('/index.php?url=owners', 'Agro Borovnice v.o.s.', 3024, 3600),
+      'page 5000' => array('/index.php?url=owners&page=5000', 'Marie Marková', 207543, 840),
+    );
+  }
+
   public function invalidIdProvider()
   {
     return array(
