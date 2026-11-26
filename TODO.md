@@ -2,27 +2,37 @@
 
 ## Zadání (technická úloha Viagem)
 
-Omezení ze zadání: nasazuje se nahráním změněných souborů bez build kroku a server se upgraduje nezávisle na kódu. Kód proto musí běžet zároveň na PHP 7.4 i 8.5 a nesmí za běhu potřebovat Composer ani jiný build (Composer slouží jen pro vývojové nástroje). Testy žádné nejsou, tým má 2–3 vývojáře a vývoj pro byznys nesmí stát.
+Omezení ze zadání:
 
-0. [x] **Testy jako záchranná síť pro migraci** – napsat teď, nechat projít na PHP 7.4 (zachytí dnešní chování), po migraci stejné testy spustit na 8.5. Jen čtení, žádný test nemění data v DB. (v2.7.4, 2026-11-26)
-   - [x] **PHPUnit – konfigurace:** `phpunit.xml` (sady `unit` a `smoke`, deprecations shodí test), `tests/bootstrap.php` (jen autoload a časová zóna; `includes/functions.php` a `class/Database.php` načítají až unit testy, ne `config.php`, takže smoke sada běží na libovolném PHP), skripty `test` a `test:smoke` v `composer.json`.
-   - [x] **PHPUnit – unit testy pomocných funkcí** (`tests/Unit/FunctionsTest.php`): `h`, `format_date`, `format_datetime`, `format_area`, `format_share`, `trim_text`, `owner_type_label`, `owner_name`, `mb_ucFirst`, `mb_lcFirst`, `is_ico`, `select_options`.
-   - [x] **PHPUnit – unit testy skládání SQL** (`tests/Unit/DatabaseWhereTest.php`): `Database::getWhere()` bez připojení k DB, parametry, `and`, `like`, kolize jmen parametrů.
-   - [x] **PHPUnit – smoke testy přes HTTP** (`tests/Smoke/PagesTest.php`, `APP_URL`): všechny stránky vrátí 200, správný nadpis a žádnou PHP chybu; vlastníci s filtry, hledáním, řazením a stránkováním, detail, úprava (jen GET), export CSV, parcely, obce, našeptávač (JSON), 404.
-   - [x] **Playwright – konfigurace** (`e2e/`): vlastní `package.json`, projekty `php74` (`:8074`) a `php85` (`:8085`), fixture, která hlídá chyby v konzoli a PHP chyby v těle stránky, `.gitignore`.
-   - [x] **Playwright – navigace a výpisy:** menu a nadpisy, 404, vlastníci (filtr, hledání IČO, řazení, stránkování, detail, formulář úpravy), parcely, obce.
-   - [x] **Playwright – JavaScript a interakce:** našeptávač obcí, potvrzovací dialog mazání poznámky (zrušit → poznámka zůstane), stažení CSV exportu.
-   - [x] **Ověření a dokumentace:** vše zelené na PHP 7.4; na 8.5 zatím očekávaně červené (`match()`); README sekce „Testy“ s příkazy pro obě verze.
-1. [x] **Převést aplikaci na PHP 8.5** při zachování kompatibility s 7.4 – viz sekce *Kompatibilita s PHP 8*. (v2.7.5, 2026-11-26)
-   - [x] Unit, smoke i Playwright testy (úkol 0) zelené na PHP 7.4 i 8.5.
-   - [x] Ověřit noční report v Dockeru na obou verzích (`php74`, `php85`).
-   - [x] Statická analýza (PHPStan) pro PHP 7.4 i 8.5, ať se chyby najdou i mimo prošlé stránky.
-2. [x] **Zrychlit výpis vlastníků** – viz sekce *Výkon*. Výchozí řazení zůstalo ve v2.7.9 beze změny; po rozhodnutí otázky 5 v `OPENQUESTIONS.md` (varianta b) se řadí podle `last_name, first_name, id` s indexem, položka *Výchozí řazení vlastníků* v sekci *Výkon*. (v2.7.9, 2026-11-26)
-   - [x] Nejdřív zjistit příčinu: počet SQL dotazů (patička) a `EXPLAIN` hlavních dotazů, s filtrem obce i bez něj. Dobu stránky neměřit, že je výpis pomalý, je zřejmé. Patička: 103 dotazů bez filtru, 153 s `f_municipality=Lhota`. Na každý řádek dotaz na název obce (`const`, levný) a `count(*)` z `ownerships` podle `owner_id` (`ALL`, 1,2 mil. řádků, bez indexu), s filtrem obce navíc všechny parcely vlastníka (také `ALL`). Tedy 50, resp. 100 průchodů celou tabulkou `ownerships` na stránku.
-   - [x] Opravit podle zjištěné příčiny (N+1 dotazy, index `ownerships.owner_id`, řazení, `count(*)` nad 500 tis. řádků). N+1: názvy obcí, počty parcel a parcely pro „V obci“ se načtou jednou za stránku dotazem `in (…)` (`Section::setRowsPrepareFunction()`, `owners_list_prepare()`), 5 dotazů bez filtru, 6 s filtrem obce. Index `idx_ownerships_owner`: dotazy `in (…)` čtou 120 řádků z indexu místo 1,2 mil. Řazení beze změny: 500 tis. vlastníků má jen 1 070 různých jmen, pořadí uvnitř jména je neurčené a každá změna řazení nebo indexu přeskupí vlastníky na stranách (otázka 5 v `OPENQUESTIONS.md`). `count(*)` beze změny: jeden průchod indexem za stránku (`index`, `Using index`) a výpis ukazuje přesný počet.
-   - [x] Změnu schématu (index) dodat jako SQL migraci s návodem pro nasazení, protože nasazení nemá migrační krok. `sql/migrations/001_ownerships_owner_id.sql`, návod v `MIGRATION.md`.
-   - [x] Počet SQL dotazů a `EXPLAIN` před a po zapsat do README.
-3. [ ] **Popsat, jak naložit s celým CRM** – nejvýše 2 strany (540 tis. řádků, 32 modulů, vlastní framework, bez testů, nasazení nahráním souborů, 2–3 vývojáři).
+- Nasazuje se nahráním změněných souborů, bez build kroku. Composer jen pro vývojové nástroje.
+- Server se upgraduje nezávisle na kódu, kód proto musí běžet na PHP 7.4 i 8.5.
+- Testy nejsou, tým má 2–3 vývojáře a vývoj pro byznys nesmí stát.
+
+0. [x] **Testy jako záchranná síť pro migraci** (v2.7.4, 2026-11-26)
+   - Cíl: zachytit dnešní chování aplikace, aby šlo po migraci ověřit, že se nic nerozbilo. Testy data v DB nemění.
+   - Řešení: testy napsané a zelené na PHP 7.4, po migraci se stejné spustí na 8.5.
+     - [x] PHPUnit: konfigurace, unit testy pomocných funkcí a skládání SQL.
+     - [x] PHPUnit: smoke testy všech stránek přes HTTP (stránka se načte, správný nadpis, žádná PHP chyba).
+     - [x] Playwright: konfigurace pro obě verze PHP, hlídá chyby v konzoli i v těle stránky.
+     - [x] Playwright: navigace, výpisy, filtry, detail a formulář vlastníka.
+     - [x] Playwright: našeptávač obcí, potvrzení mazání poznámky, stažení CSV exportu.
+     - [x] Ověření a dokumentace: vše zelené na 7.4 (na 8.5 tehdy očekávaně červené), README sekce „Testy“.
+1. [x] **Převést aplikaci na PHP 8.5** (v2.7.5, 2026-11-26)
+   - Cíl: aplikace běží na PHP 8.5 a dál i na 7.4.
+   - Řešení: opravy v sekci *Kompatibilita s PHP 8*.
+     - [x] Všechny testy (úkol 0) zelené na 7.4 i 8.5.
+     - [x] Noční report ověřený v Dockeru na obou verzích.
+     - [x] Statická analýza (PHPStan) pro 7.4 i 8.5.
+2. [x] **Zrychlit výpis vlastníků** (v2.7.9, 2026-11-26)
+   - Cíl: výpis vlastníků se načítá pomalu.
+   - Řešení: viz sekce *Výkon*.
+     - [x] Nejdřív zjistit příčinu: stránka dělala přes 100 dotazů, pro každý řádek zvlášť. Dotazy na počet parcel (s filtrem obce i na parcely vlastníka) procházely celou tabulku vlastnických vztahů.
+     - [x] Opravit: data pro celou stránku se načtou několika dotazy a přibyl index. Výchozí řazení zůstalo, jeho změnu rozhodl zadavatel (otázka 5, položka *Výchozí řazení vlastníků*).
+     - [x] Index dodat jako SQL migraci s návodem v `MIGRATION.md` (nasazení nemá migrační krok).
+     - [x] Počet SQL dotazů a `EXPLAIN` před a po zapsat do README.
+3. [ ] **Popsat, jak naložit s celým CRM**
+   - Cíl: nejvýše 2 strany o tom, jak postupovat s celým CRM (velký kód, vlastní framework, bez testů, nasazení nahráním souborů, malý tým).
+   - Řešení: zatím nenapsáno (kapitola 3 v `GUIDE.md`).
 
 Odevzdání:
 
@@ -31,79 +41,187 @@ Odevzdání:
 
 ## Známé problémy
 
-Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené (`php -l` na PHP 8.6), ostatní vycházejí ze čtení kódu a před opravou je potřeba je reprodukovat.
+Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené syntaktickou kontrolou na PHP 8, ostatní vycházejí ze čtení kódu a před opravou se reprodukují.
 
 ### Kompatibilita s PHP 8
 
-- [x] ✔ `includes/functions.php:51` – `function match()` je od PHP 8.0 rezervované slovo, parse error shodí celou aplikaci. Přejmenovat (např. `regex_match`) včetně volání v `is_ico()` a `owners_functions.php`.
-- [x] ✔ `admin_owners/owners_detail.php:50` – vnořený ternární operátor bez závorek je v PHP 8 fatal error. ~~Nahradit voláním `owner_name($owner)`~~ – to by změnilo výsledek u fyzické osoby s titulem a bez křestního jména (`Ing. Novák` místo dnešního `Novák`), proto jen závorky podle vyhodnocení v PHP 7.4 (zleva).
-- [x] ✔ `case 'F';` se středníkem (`includes/functions.php`, `cron/nightly_report.php`) – deprecated, nahradit dvojtečkou.
-- [x] ✔ Přetypování `(integer)` / `(boolean)` – deprecated, nahradit `(int)` / `(bool)`.
-- [x] ✔ `cron/nightly_report.php:62` – operátor backtick je deprecated, použít `gethostname()`.
-- [x] `includes/functions.php` – `get_magic_quotes_gpc()` v PHP 8 neexistuje.
-- [x] `owners_detail.php` – `count($owner)` na `null` (neexistující vlastník) hází v PHP 8 `TypeError`.
-- [x] `cron/nightly_report.php` – `is_resource($ch)` je v PHP 8 pro curl vždy `false` (`CurlHandle` je objekt), ping proto vždy hlásí nedostupnost.
-- [x] `strftime()` v exportu je deprecated (PHP 8.1), nahradit `date()`.
-- [x] Dynamické vlastnosti v `Database`, `QueryResult` a `Section` jsou od PHP 8.2 deprecated – deklarovat je.
-- [x] ✔ `plugin/minify/Minify.php` – přístup ke znaku řetězce složenými závorkami (`$css{$i}`) je od PHP 8.0 parse error; aplikace na 8.5 nenačte hlavičku stránky. Nahrazeno `$css[$i]` (jediná úprava přibalené knihovny).
-- [x] ✔ `includes/functions.php` – PHP 8.4 má vestavěné `mb_ucfirst()` a `mb_lcfirst()`, vlastní `mb_ucFirst()` / `mb_lcFirst()` (názvy funkcí nerozlišují velikost písmen) jsou fatal error „Cannot redeclare“. Deklarují se jen tam, kde vestavěné chybí.
-- [x] ✔ `owners_functions.php` – implicitně nullable parametr `Section $section = null` je od PHP 8.4 deprecated, nahrazeno `?Section`.
-- [x] ✔ PDO MySQL od PHP 8.1 vrací s emulovanými prepared statements čísla jako `int`, ne řetězce. Porovnání `do_not_contact === '1'` (detail, úprava, výpis, export) by na 8.x neplatilo. Nastaveno `PDO::ATTR_STRINGIFY_FETCHES`, typy jsou pak stejné jako na 7.4 (řetězce, `NULL` zůstává).
-- [x] ✔ Porovnání `$r['duedate'] == 0` (výpis, úprava, export) je na 7.4 pravda pro `'0000-00-00'`, na 8.x nepravda (řetězec vs. číslo); vlastník bez termínu by měl termín „30. 11. -0001“. Nahrazeno `(int)$r['duedate'] == 0`, výsledek je stejný jako na 7.4.
-- [x] `count()` na `null` hází v PHP 8 `TypeError`: `owner_parcels()` vrací `null` pro vlastníka bez parcel a detail ho předává do `count()` (viz *Chyby v logice*).
-- [x] ✔ `curl_close()` je od PHP 8.5 deprecated (od 8.0 nic nedělá), odstraněno; na 7.4 se handle uvolní na konci funkce.
-- [x] `null` z databáze do vestavěných funkcí – deprecated od 8.1, na PHP 8 skryté přes `error_reporting`, v PHP 9 chyba; testovací data tyto hodnoty nemají, proto je testy ani běh s `E_ALL` nezachytily: `land_type = NULL` do `mb_ucFirst()` (`admin_parcels_main.php:25`, `:35`, `admin_owners/owners_detail.php:142`, `cron/nightly_report.php:122`; na 8.4+ je to vestavěná funkce), `NULL` jako klíč pole (`admin_parcels_main.php:20` `lv_number`, `:35` `land_type`; deprecated v 8.5), `municipality_name = NULL` do `mb_stripos()` (`includes/functions.php`, `owner_parcels_in_municipality()`), `number_format(null)` (`class/Section.php`, sloupec typu `int`). Ověřeno dočasnými řádky s `NULL` a během s `E_ALL` a logem do souboru: na 8.5 hlášení Deprecated u všech míst kromě `Section` (to je jen při chybě dotazu, ověřeno unit testem). Hodnota se přetypuje `(string)` / `(float)`, výstup je pro `NULL` i ostatní hodnoty stejný jako dosud. Stejně opravené `format_area(null)` (detail vlastníka, vlastnický vztah k neexistující parcele). Stejně `number_format()` na přehledu (`admin_dashboard_main.php`, `NULL` při chybě dotazu). `get_municipality_name()` a `owner_parcel_count()` pro neexistující obec nebo chybu dotazu četly klíč z `null` (na 8.x varování „array offset on null“, ověřeno unit testem), teď vrátí `null` bez varování; výsledek je stejný jako dosud. (v2.7.8, 2026-11-26)
-- [x] Předávání `null` do parametrů vestavěných funkcí (`trim`, `strtolower`, `strlen`, `str_replace`, `preg_match`, `htmlspecialchars`) je od PHP 8.1 deprecated, v PHP 9 chyba: parametry filtrů, hledání a řazení (`Section`), formuláře poznámky a úpravy vlastníka, `regex_match()`, poznámka ve výpisu, `h(null)` (dosud skryté operátorem `@`), našeptávač bez parametru `q`.
-- [x] ✔ PDO od PHP 8.0 vyhazuje při chybě SQL výjimku (výchozí `ERRMODE_EXCEPTION`, v 7.4 `ERRMODE_SILENT`). Aplikace počítá s návratovou hodnotou `false`: noční report při druhém běhu za den spadl na fatální chybě (duplicitní `run_date`), stejně by dopadl každý chybný dotaz na stránce. Nastaveno `PDO::ATTR_ERRMODE => PDO::ERRMODE_SILENT`.
-- [x] ✔ `fputcsv()` bez parametru `$escape` je od PHP 8.4 deprecated (export, každý řádek). Předává se výslovně dosavadní výchozí hodnota `'\\'`. Po opravě CSV formula injection (*Bezpečnost*) se předává prázdný escape znak `''` (`csv_line()`).
-- [x] ✔ Konstanta `PDO::MYSQL_ATTR_INIT_COMMAND` je od PHP 8.5 deprecated, náhrada `Pdo\Mysql::ATTR_INIT_COMMAND` v 7.4 neexistuje. `Database::connect()` použije tu, která je k dispozici.
-- [x] ✔ Hodnota parametru v URL jako pole shodí na PHP 8 stránku `TypeError`, na 7.4 jen varování: `?url[]=x` (`index.php:7`, `trim()`), `?sort[]=x` (`class/Section.php:168`, `isset()` s polem jako klíčem), `ajax_municipalities.php?q[]=x` (`ajax_municipalities.php:7`, `trim()`) a POST `duedate[]=x` v úpravě vlastníka (`admin_owners/owners_edit.php:34`, `strtotime()`). Parametry, které se při migraci přetypovávají `(string)` (filtry, hledání, směr řazení, formuláře), nespadnou, ale na obou verzích z pole udělají text „Array“ (viz *Chyby v logice*). Jen podvržené požadavky, aplikace takové odkazy netvoří. Opraveno v *Chyby v logice*: `get_param()` / `post_param()` pole ignorují a vrátí výchozí hodnotu. (v2.7.6, 2026-11-26)
-- [x] Locale `cs_CZ.UTF-8`: pokud je nainstalované, PHP 7.4 převádí desetinná čísla na text s čárkou (doba výpočtu v nočním reportu `cron/nightly_report.php:127` a `:160`, `logs/slow_query.log` z `class/Database.php:130`), PHP 8 vždy s tečkou. Do databáze PDO čísla předává nezávisle na locale. Ověřeno v dočasném kontejneru PHP 7.4 s vygenerovaným `cs_CZ.UTF-8`: noční report „Hotovo za 2,77 s“; PDO i tam předá `2.76`. `includes/config.php` po `setlocale(LC_ALL, …)` nastaví `setlocale(LC_NUMERIC, 'C')`, obě verze pak píšou tečku nezávisle na locale serveru. Formát čísel jinde na locale nezávisí (`number_format()` má oddělovače v parametrech); třídy znaků v regulárních výrazech bez `/u` závisí na `LC_CTYPE`, výsledek je ale na 7.4 i 8.5 stejný (viz `MIGRATION.md`). (v2.7.8, 2026-11-26)
+Všechny opravy zachovávají chování z PHP 7.4.
+
+- [x] ✔ **Vlastní funkce `match()`**
+  - Problém: od PHP 8 je to rezervované slovo, aplikace se vůbec nespustí.
+  - Řešení: funkce přejmenovaná.
+- [x] ✔ **Vnořený ternární operátor v detailu vlastníka**
+  - Problém: na PHP 8 fatální chyba, detail se nezobrazí.
+  - Řešení: doplněné závorky podle vyhodnocení v 7.4. Náhrada funkcí `owner_name()` by změnila jméno osoby s titulem bez křestního jména, proto ne.
+- [x] ✔ **Zastaralé zápisy** (`case` se středníkem, `(integer)` / `(boolean)`, backtick)
+  - Problém: PHP 8 hlásí varování, v dalších verzích to bude chyba.
+  - Řešení: nahrazené současnými zápisy.
+- [x] **Funkce, které v PHP 8 nejsou nebo se chovají jinak**
+  - Problém: chyba nebo varování; noční report navíc vždy hlásil nedostupný server.
+  - Řešení: nahrazené nebo odstraněné.
+    - `get_magic_quotes_gpc()`, `strftime()`, kontrola curl handle (objekt místo resource).
+    - ✔ `curl_close()` (od 8.5 varování, od 8.0 nic nedělá): odstraněno.
+- [x] **`count()` na `null`** (neexistující vlastník, vlastník bez parcel)
+  - Problém: na PHP 8 detail vlastníka spadne.
+  - Řešení: funkce vrací prázdné pole, detail s chybějícím vlastníkem počítá (viz *Chyby v logice*).
+- [x] **Nedeklarované vlastnosti tříd**
+  - Problém: PHP 8.2 hlásí varování, v PHP 9 to bude chyba.
+  - Řešení: vlastnosti deklarované.
+- [x] ✔ **Přibalená knihovna Minify**
+  - Problém: starý zápis přístupu ke znaku řetězce, na 8.5 se nenačte hlavička stránky.
+  - Řešení: jediná úprava knihovny, nový zápis.
+- [x] ✔ **Vlastní `mb_ucFirst()` / `mb_lcFirst()`**
+  - Problém: PHP 8.4 má stejné funkce vestavěné, aplikace spadne.
+  - Řešení: vlastní se deklarují jen tam, kde vestavěné chybí.
+- [x] ✔ **Parametr s výchozí hodnotou `null` bez typu `?`**
+  - Problém: PHP 8.4 hlásí varování, v PHP 9 to bude chyba.
+  - Řešení: typ doplněný.
+- [x] ✔ **Čísla z databáze jako čísla místo textu**
+  - Problém: od PHP 8.1 by přestalo fungovat porovnání příznaku „neoslovovat“.
+  - Řešení: databáze vrací text jako na 7.4.
+- [x] ✔ **Prázdný termín oslovení**
+  - Problém: na 8.x by vlastník bez termínu měl termín „30. 11. -0001“.
+  - Řešení: porovnání upravené, výsledek jako na 7.4.
+- [x] **Prázdné hodnoty z databáze do vestavěných funkcí** (v2.7.8, 2026-11-26)
+  - Problém: PHP 8.1 hlásí varování, v PHP 9 to bude chyba. Týká se prázdného druhu pozemku, obce nebo výměry. Testovací data je nemají, testy je proto nezachytily.
+  - Řešení: hodnoty se převedou na text nebo číslo, výstup je stejný jako dosud. Ověřeno dočasnými řádky s prázdnými hodnotami.
+- [x] **Chybějící parametry požadavku do vestavěných funkcí**
+  - Problém: PHP 8.1 hlásí varování, v PHP 9 to bude chyba. Týká se filtrů, hledání, řazení, formulářů a našeptávače bez zadaného textu.
+  - Řešení: opraveno při migraci, chybějící hodnota se bere jako prázdný text.
+- [x] ✔ **Chyba SQL jako výjimka**
+  - Problém: PHP 8 při chybě SQL vyhodí výjimku, aplikace s tím nepočítá. Noční report při druhém běhu za den spadl.
+  - Řešení: nastavené chování jako na 7.4 (chyba vrátí `false`).
+- [x] ✔ **CSV export: parametr `escape`**
+  - Problém: PHP 8.4 hlásí varování u každého řádku, v PHP 9 to bude chyba.
+  - Řešení: předává se výslovně. Po opravě vzorců v CSV (*Bezpečnost*) prázdný.
+- [x] ✔ **Konstanta pro nastavení připojení k MySQL**
+  - Problém: PHP 8.5 hlásí varování, náhrada v 7.4 neexistuje.
+  - Řešení: použije se ta, která je k dispozici.
+- [x] ✔ **Pole místo hodnoty v parametru adresy** (v2.7.6, 2026-11-26)
+  - Problém: podvržená adresa shodí stránku na PHP 8, jinde se z pole stane text „Array“. Aplikace takové odkazy netvoří.
+  - Řešení: pole se ignoruje, jako by parametr chyběl (viz *Chyby v logice*).
+- [x] **České locale na serveru** (v2.7.8, 2026-11-26)
+  - Problém: PHP 7.4 s českým locale píše desetinná čísla s čárkou (noční report, log pomalých dotazů), PHP 8 vždy s tečkou.
+  - Řešení: pro čísla se nastaví locale „C“, obě verze píšou tečku. Podrobnosti v `MIGRATION.md`.
 
 ### Bezpečnost
 
-- [x] SQL injection: hodnoty filtrů a hledání se vkládají do SQL přes `str_replace('{value}', …)` (`class/Section.php`, `getWhereArray()`). Ověřeno: hledání `zzzqq%' or 'a' like 'a` v obcích vrátilo všech 6 250 obcí místo 0; filtr okresu s `<>` v hodnotě obešel i vazbu v `getWhere()` (levá strana podmínky zůstala v SQL). Hodnoty filtrů a hledání jsou parametry (`{value}` v definici filtru se nahradí `:f_<id>`, hledání `'%' . hodnota . '%'`), `getWhere()` už navázaný parametr nechá beze změny. Výsledky pro běžné hodnoty jsou stejné. (v2.7.7, 2026-11-26)
-- [x] SQL injection: `ajax_municipalities.php` vkládá parametr `q` přímo do dotazu. Ověřeno (`q=Lh'` chyba SQL, `zz%' or 'a' like 'a` vrátil obce). `q` je parametr. (v2.7.7, 2026-11-26)
-- [x] SQL injection: `owners_detail.php` maže poznámku podle neošetřeného `$_GET['delete_note']`. Ověřeno (`delete_note=x'` chyba SQL). Mazání je POST s `(int)` ID jako parametrem. (v2.7.7, 2026-11-26)
-- [x] Mazání poznámky: GET bez CSRF tokenu a bez kontroly, že poznámka patří zobrazenému vlastníkovi. Maže se formulářem (POST) s CSRF tokenem a jen `where id = :note_id and owner_id = :owner_id`. CSRF token (`csrf_token()`, `csrf_field()`, `csrf_check()`) mají všechny formuláře: přidání a smazání poznámky, úprava vlastníka. Bez platného tokenu přesměrování s chybou, formulář úpravy pak ukáže hodnoty z DB, ne odeslané. (v2.7.7, 2026-11-26)
-- [x] Mazání poznámky: `?delete_note[]=x` (`admin_owners/owners_detail.php:5-7`, přímo `$_GET`, ne přes `get_param()`) vytvoří SQL `id = Array`, dotaz potichu selže, ale hláška oznámí „Poznámka byla smazána.“ Patří k ošetření `delete_note` výše. Ověřeno. Hláška o smazání jen tehdy, když se řádek opravdu smazal, jinak chyba. (v2.7.7, 2026-11-26)
-- [x] Ošetření vstupů: podvržený POST s `duedate[]=x` nebo `note[]=x` ve formuláři úpravy vlastníka `post_param()` ignoruje jako chybějící pole, takže se uloží prázdný termín oslovení, resp. poznámka `NULL` (`admin_owners/owners_edit.php:27`, `:29`, `:34`, `:38`). Pole ve vstupu by mělo být chybou validace. Ověřeno (bez chyby validace). Pole v kterémkoli poli formuláře je chyba validace (`post_has_array()`), nic se neuloží. (v2.7.7, 2026-11-26)
-- [x] XSS: hodnoty filtrů a hledaný výraz se vypisují neescapované (`Section::showFilters()`, `showInfo()`). Ověřeno (`search=<script>…` na stránce beze změny). Escapované přes `h()`. (v2.7.7, 2026-11-26)
-- [x] XSS: text poznámky se vypisuje přes `nl2br()` bez `h()` (`owners_detail.php`, výpis poznámek); na přehledu přes `trim_text()` bez `h()`. Ověřeno dočasnou poznámkou s HTML. `nl2br(h(…))`, na přehledu `h(trim_text(…))`. Při kontrole šablon navíc escapovaný kód katastrálního území v detailu vlastníka (text z DB); ostatní neescapované výstupy jsou čísla z DB nebo texty z kódu. (v2.7.7, 2026-11-26)
-- [x] XSS: našeptávač vkládá popisky přes `innerHTML` (`js/app.js`). Ověřeno testem Playwright s podvrženou odpovědí. Popisky přes `textContent`. (v2.7.7, 2026-11-26)
-- [x] CSV formula injection: export (`admin_owners/owners_export.php:46-62`) zapisuje hodnoty z DB beze změny; text začínající `=`, `+`, `-` nebo `@` (jméno, ulice, e-mail…) Excel po otevření vyhodnotí jako vzorec. Řešení: takovým hodnotám předřadit `'`; pozor na telefon `+420…`, který by se tím změnil. Ověřeno dočasným vlastníkem (`=1+1`, `@SUM(A1)`, `-2+3` v exportu beze změny). Buňky datových řádků projdou `csv_safe()`: hodnota začínající `=`, `+`, `-`, `@`, tabulátorem nebo CR dostane na začátek `'`, telefonní čísla (`^\+?[0-9 ()-]+$`, např. `+420 777 123 456`) zůstanou beze změny. Hlavička exportu se nemění. Známé omezení: výjimka pro telefon platí pro všechny sloupce, takže např. `-1-1` nebo `+420-777-123-456` zůstanou bez `'` a tabulkový procesor je spočítá jako číslo; bez písmen nejde zapsat funkci, odkaz ani DDE, proto to není nebezpečné. Z review navíc: `fputcsv()` s escape znakem `\\` nezdvojí uvozovku za zpětným lomítkem, hodnota `x\";=2+3;\"` se tak zapsala jako `"x\";=2+3;\""` a tabulkový procesor (zpětné lomítko jako escape nezná) ji rozdělil do buněk `x\`, `=2+3`… – vzorec obešel `csv_safe()`. Ověřeno testem výstupu `fputcsv()` na 7.4 i 8.5. Export zapisuje řádky přes `csv_line()` s prázdným escape znakem (`''`, od PHP 7.4.0, na 8.5 bez deprecated): každá uvozovka se zdvojí. Výstup se mění jen u hodnot se zpětným lomítkem. (v2.7.8, 2026-11-26)
-- [x] Nepoužívaný kód skládá SQL z neošetřených hodnot: `Database::delete()` (`class/Database.php:289-292`, `$id` přímo v SQL), `prepareData()`, `escape()` a `db_escape()` (`includes/functions.php:3-12`, `addslashes`). Dnes je nic nevolá; odstranit, aby je nikdo nepoužil. Ověřeno prohledáním celého repozitáře (i testy, cron, plugin): nikde se nevolají. Odstraněno. (v2.7.8, 2026-11-26)
+- [x] **SQL injection ve filtrech, hledání, našeptávači a mazání poznámky** (v2.7.7, 2026-11-26)
+  - Problém: podvržený text ve filtru nebo hledání změnil dotaz do databáze (např. vrátil všechny obce). Ověřeno.
+  - Řešení: hodnoty se předávají jako parametry dotazu. Výsledky běžného hledání se nemění.
+- [x] **Mazání poznámky odkazem** (v2.7.7, 2026-11-26)
+  - Problém: poznámku šlo smazat podvrženým odkazem, i cizímu vlastníkovi. Při chybě hláška tvrdila, že se smazala.
+  - Řešení: maže se formulářem s ochranným tokenem (CSRF) a jen u zobrazeného vlastníka. Token mají všechny formuláře. Hláška o smazání jen při skutečném smazání.
+- [x] **Hodnota odeslaná jako seznam ve formuláři úpravy vlastníka** (v2.7.7, 2026-11-26)
+  - Problém: podvržený formulář s hodnotou odeslanou jako seznam uložil prázdný termín nebo poznámku bez chyby.
+  - Řešení: je to chyba validace, nic se neuloží.
+- [x] **XSS: neescapované výstupy** (v2.7.7, 2026-11-26)
+  - Problém: text z filtru, hledání nebo poznámky se vložil do stránky jako HTML a mohl spustit skript. Stejně popisky našeptávače. Ověřeno.
+  - Řešení: výstupy se escapují, našeptávač vkládá jen text.
+- [x] **CSV export: vzorce** (v2.7.8, 2026-11-26)
+  - Problém: hodnota začínající `=`, `+`, `-` nebo `@` se po otevření v Excelu vyhodnotí jako vzorec. Z review navíc: uvozovka za zpětným lomítkem rozdělila hodnotu do buněk a vzorec prošel.
+  - Řešení: takové hodnoty dostanou na začátek `'`, telefonní čísla zůstanou beze změny. Uvozovky se vždy zdvojí.
+  - Známé omezení: číselné hodnoty jako `-1-1` zůstanou bez `'` a spočítají se. Bez písmen ale nejde zapsat funkci ani odkaz, proto to není nebezpečné.
+- [x] **Nepoužívaný kód s neošetřeným SQL** (v2.7.8, 2026-11-26)
+  - Problém: funkce, které skládají SQL z neošetřených hodnot. Nic je nevolá, ale někdo by je mohl použít.
+  - Řešení: odstraněné (ověřeno prohledáním celého repozitáře).
 
 ### Výkon
 
-- [x] N+1 dotazy ve výpisu vlastníků: název obce a počet parcel pro každý řádek, s filtrem obce navíc všechny parcely vlastníka (`owners_list_row()`). Načítají se jednou za stránku dotazy `in (…)` (`owners_list_prepare()`); 103 → 5 dotazů, s filtrem obce 153 → 6. HTML výpisu je stejné jako dříve. (v2.7.9, 2026-11-26)
-- [x] Filtr obce ve výpisu vlastníků: odkaz přes id. Odkaz „vlastníci“ z výpisu obcí posílá `f_municipality_id=<id>` místo názvu (rozhodnutí z 26. 11. 2026, `OPENQUESTIONS.md`, otázka 1). Nový skrytý filtr `Section::addHiddenFilter()`: bere jen číslice (jinak se ignoruje), hodnota je parametr, ve formuláři filtrů před prvním polem popisek „Obec: <b>název</b> ×“ (název jedním dotazem s parametrem, escapovaný; × odebere tento parametr a stránku, ostatní filtry zůstanou) a hodnota jako skryté pole, takže filtr zůstane i po odeslání ostatních filtrů nebo hledání. Ve výpisu vlastníků je to `o.municipality_id = id` (obec vlastníka, varianta a) jako dosud) a „V obci“ spočítá počet a výměru podílů v SQL podle `p.municipality_id` (`owners_parcels_in_municipality()`) místo podřetězce názvu. „Lhota“ z odkazu ukáže 240 vlastníků místo 20 000. Stránka má 7 SQL dotazů (s textovým filtrem 6, navíc název obce pro popisek). Hlavní dotaz a `count(*)` dál procházejí všech 500 tis. vlastníků (`EXPLAIN`: `ALL`), index na `owners.municipality_id` je samostatná položka níže. Textové pole „Obec“ s našeptávačem se nemění (podřetězec). HTML ostatních stránek je stejné jako dříve, ve výpisu obcí se změnil jen odkaz. Export s `f_municipality_id` obsahuje vlastníky obce. (v2.7.11, 2026-11-26)
-- [ ] Filtr obce ve výpisu vlastníků: textové pole. Význam rozhodnut 26. 11. 2026 (`OPENQUESTIONS.md`, otázka 1, varianta a): odkaz u obce i filtr znamenají obec vlastníka (bydliště nebo sídlo), jako dosud. Textové pole „Obec“ dál hledá podřetězec (`m.name like %…%`; bez migrace 3 přes všechny vlastníky, `ALL`) a „V obci“ s ním filtruje parcely v PHP přes `mb_stripos`. Původní popis: Odkaz „vlastníci“ z výpisu obcí (`municipalities_row()` v `admin_municipalities/municipalities_section.php`) posílá název obce a filtr hledá podřetězec (`m.name like %…%`), takže „Lhota“ najde 20 000 vlastníků místo 240 (i Horní, Dolní… Lhota). Sloupec „V obci“ pro každý řádek načte všechny parcely vlastníka a filtruje je v PHP přes `mb_stripos` (dříve `owner_parcels_in_municipality()`, teď `parcels_in_municipality()`), opět podle podřetězce. Změřeno na PHP 8.5: bez filtru 8,1 s, „Lhota“ 21,3 s, „Horní Lhota“ (2 000 vlastníků) 24,0 s, zdržuje tedy práce na řádku, ne počet nalezených. Řešení: odkaz přes id (`f_municipality_id`, skrytý filtr v `Section`), „V obci“ spočítat v SQL podle `p.municipality_id`. Co filtr znamená (obec vlastníka, nebo vlastníci parcel v obci), viz `OPENQUESTIONS.md`, otázka 1. Hotovo v rámci N+1 (úkol 2): parcely pro „V obci“ se už nenačítají pro každý řádek, ale jedním dotazem za stránku; filtrují se dál v PHP stejným `mb_stripos`, aby se výsledek nezměnil. Odkaz přes id a „V obci“ v SQL jsou hotové (položka výše); zbývá samotný textový filtr. Od indexu `idx_owners_municipality` (položka *Index na `owners.municipality_id`*) optimalizátor nejdřív najde obce podle podřetězce a jejich vlastníky čte z indexu: `count(*)` „Lhota“ 825 stránek místo 1 mil., „Zadní Ves v Údolí“ (80 vlastníků) 1. strana 279 stránek místo 1,46 mil. Beze změny zůstává `like %…%` přes všech 6 250 obcí a u velkého výsledku jako „Lhota“ (20 000 vlastníků) dotaz na řádky na každé straně řadí všechny nalezené (61 tis. stránek, na 1. až 9. straně víc než dříve; vyhodnoceno jako zlepšení, protože celá stránka je levnější). Cena roste asi o 3 stránky na nalezeného vlastníka: velmi široký filtr (jedno písmeno, „e“ 400 tis., „a“ 466 tis. vlastníků) je s indexem 2,2× až 2,6× pomalejší než bez něj (`MIGRATION.md`, 5.3).
-- [x] N+1 dotazy ve výpisu parcel (vlastníci každé parcely) a obcí (počet parcel každé obce). Plány dotazů byly v pořádku (`ref`, 1 řádek, resp. 128 řádků z indexu), problém byl počet: 54, resp. 55 dotazů na stránku. Parcely: vlastníci všech parcel stránky jedním dotazem `in (…)` (`parcels_list_prepare()`, `parcels_owners()`). Obce: korelovaný poddotaz v hlavním dotazu, MariaDB ho vyhodnotí jen pro řádky stránky (`r_loops=50`); dávka čte stejně a je o dotaz delší, `left join … group by` čte 800 tis. řádků a rozbije `count(*)` v `Section`. 54 → 5 a 55 → 5 dotazů, bez nového indexu. HTML výpisu je stejné jako dříve (u parcel až na neurčené pořadí vlastníků se stejným příjmením, viz *Chyby v logice*). (v2.7.10, 2026-11-26)
-- [x] Chybí index `ownerships.owner_id` (1,2 mil. řádků). SQL migrace `sql/migrations/001_ownerships_owner_id.sql` (idempotentní, online), postup v `MIGRATION.md`. Index na `owners.municipality_id` záměrně ne: změní plán dotazu s filtrem obce a s ním pořadí vlastníků se stejným jménem na stranách. (v2.7.9, 2026-11-26)
-- [x] Výchozí řazení vlastníků `concat(last_name, ' ', first_name)` nevyužije index a pořadí vlastníků se stejným jménem je neurčené. Rozhodnuto (otázka 5 v `OPENQUESTIONS.md`, varianta b): řadit podle `last_name, first_name, id` a přidat index `(last_name, first_name, id)` jako SQL migraci. Před změnou porovnat pořadí s dnešním na celých datech (právnické osoby mají prázdné `first_name` a mezery v `last_name`) a ověřit `EXPLAIN` bez filtru i s filtry. U `setSortBy()` v `admin_owners/owners_functions.php` krátký komentář, proč se řadí podle sloupců a `id` a že na tom závisí index (odkaz na otázku 5). Navazuje na rozpracovaný filtr obce (stejné soubory). Řadí se `o.last_name, o.first_name, o.id` (komentář u `setSortBy()`), index `idx_owners_name` je migrace `sql/migrations/002_owners_name.sql` včetně `ANALYZE TABLE` s histogramy sloupců `type`, `ico`, `municipality_id`, `do_not_contact` (bez nich optimalizátor u filtru podle id obce a hledání IČO zvolí čtení celého indexu, viz `MIGRATION.md`, 5.2). Pořadí porovnané na všech 500 000 vlastnících: posloupnost všech 1 070 jmen je stejná jako s `concat()`, rozdíl 0 (na testovacích datech nemá žádná osoba příjmení rovné prvnímu slovu názvu firmy a `first_name` není `NULL`); uvnitř jména se řadí podle id. `EXPLAIN` / `ANALYZE`: bez filtru, s typem, neoslovovat a textovým filtrem obce čte 1. strana z indexu (bez filtru 50 řádků místo 500 000 a filesortu), filtr podle id obce a hledání IČO zůstávají u průchodu tabulkou, vzdálené strany (asi od 75.) a `count(*)` s filtry beze změny. Hledání jména s indexem pro řazení četlo u vzácného jména skoro celý index („Svobodová“ 1,2 mil. stránek místo 4 tis., `like '%…%'` optimalizátor neodhadne, histogram nepomůže), proto se s vyplněným hledáním řadí `o.id + 0` místo `o.id`: stejné pořadí, které z indexu číst nejde, plán je průchod tabulkou a filesort jako dříve (hint `IGNORE INDEX` by bez migrace byl chyba SQL 1176). Filtrované první strany (typ F, „neoslovovat“ 1. až 4. strana, typ P + „neoslovovat“) čtou z indexu až asi 4× víc stránek z buffer poolu než dřívější průchod tabulkou (asi 4 tis.), ale podle `ANALYZE` jsou mnohem rychlejší. Filtr „neoslovovat“ (sám i s typem F) na 5. až 60. straně čte mnohonásobně víc, 4,7× až 21× (7 až 88 tis. řádků indexu, 60. strana 265 tis. stránek místo 13 tis.), doba podle `ANALYZE` je do 30. strany nižší, na 40. až 60. zhruba stejná; od 61. až 70. strany optimalizátor sám přejde na průchod tabulkou. S chladným buffer poolem by tyto strany mohly být pomalejší (náhodná čtení). Na stranách jsou u stejných jmen jiní vlastníci, pořadí jmen na 20 testovaných adresách výpisu a 4 exportech beze změny; opakovaná načtení a 7.4 = 8.5 bajtově shodná, výpisy parcel a obcí beze změny. `ANALYZE TABLE ownerships` doplněn i do migrace `ownerships.owner_id`; přehled DB migrací v `MIGRATION.md`, kapitola 5. (v2.8.2, 2026-11-26)
-- [x] Index na `owners.municipality_id`, poslední sloupec vazeb N:1 a M:N bez indexu. Ostatní indexy už existují: `parcels.municipality_id`, `owner_notes.owner_id`, `ownerships.owner_id` a `ownerships.parcel_id`. Index pomůže filtru obce (`o.municipality_id = …`) a přehledu obcí v `cron/nightly_report.php` (`group by municipality_id`). Dělat až po položce *Výchozí řazení vlastníků*: dokud řazení není jednoznačné, změna plánu přeskupí vlastníky se stejným jménem na stranách (proto se index v2.7.9 nepřidal). SQL migrace stejně jako `idx_ownerships_owner` (idempotentní, online), ověřit `EXPLAIN` s filtrem obce i bez něj. Cizí klíče řeší otázka 6 v `OPENQUESTIONS.md`. Index `idx_owners_municipality (municipality_id, last_name, first_name, id)` je migrace `sql/migrations/003_owners_municipality.sql` (idempotentní, online, `ANALYZE TABLE owners`), kód se nemění (`MIGRATION.md`, 5.3). Složený místo prostého: stranu filtru podle id obce čte v pořadí bez filesortu (1. strana 156 stránek z buffer poolu, s prostým `(municipality_id)` 876, bez indexu 3 985), na produkci s velkými obcemi rozdíl roste; ostatní dotazy mají s oběma stejný plán. Filtr podle id obce (1., 2., 5. strana, s typem P/F, neoslovovat, hledáním, řazením) a `count(*)`: `ref` místo `ALL` + filesort, 6 až 726 stránek místo asi 4 tis.; export CSV s id obce bez filesortu. Textový filtr obce také zrychlí (obce podle názvu, vlastníci z indexu): `count(*)` „Lhota“ 825 stránek místo 1 mil., „Zadní Ves v Údolí“ 1. strana 279 stránek místo 1,46 mil.; samotný dotaz na řádky „Lhota“ čte na 1. až 9. straně víc (61 tis. stránek místo 6 až 56 tis., řadí všech 20 000 nalezených), celá stránka s `count(*)` je ale mnohem levnější (1. strana asi 16×), vyhodnoceno jako zlepšení. Dotaz na řádky stojí asi 3 stránky na nalezeného vlastníka: „Horní“ (50 tis.) a „nad“ (85 tis.) jsou celkově 4× až 7× levnější, velmi široké filtry „e“ a „a“ (400 až 466 tis.) 2,2× až 2,6× pomalejší (hranice asi 40 % vlastníků, ověřit na produkci). Pořadí ve výchozím řazení se nemění; řazení podle „Založeno“ jen při jedinečném `created_at` (bod (b) v *Chyby v logice*, ověřit na produkci). Výpis bez filtru, neoslovovat, typ F, hledání a IČO beze změny. Noční report: přehled obcí čte index místo tabulky (`EXPLAIN`). Histogramy z migrace 2 se znovu nesbírají (popisují hodnoty, data se nezměnila); plán filtru podle id obce je s indexem stejný i bez nich. HTML 41 adres (vlastníci, parcely, obce, export) je před a po na PHP 7.4 i 8.5 bajtově shodné, opakovaná načtení také; kontrolní součty tabulek beze změny. (v2.8.3, 2026-11-26)
-- [ ] Výpis parcel: název obce korelovaným poddotazem místo `left join municipalities` (`admin_parcels_main.php`). Join hledá obec i pro řádky, které OFFSET přeskočí. Změřeno na lokální MariaDB 10.11 (800 tis. parcel, `limit 400000, 50`, řazení `p.id`): s joinem 0,52 s a `Handler_read_key` 400 050, s poddotazem `(select name from municipalities m where m.id = p.municipality_id) as municipality_name` 0,10 s a 100. MariaDB ho vyhodnotí jen pro řádky stránky, stejně jako počet parcel u obcí (v2.7.10). Dávkové načtení názvů (`municipality_names()` v `parcels_list_prepare()`) je stejně rychlé (0,2 ms navíc), ale znamená víc kódu. `count(*)` se nezmění, MariaDB `left join` bez čtených sloupců už dnes vynechá (table elimination, `EXPLAIN` jen `p`). Filtr „Obec“ (`m.name like …`) join potřebuje ve WHERE, nahradit ho `p.municipality_id in (select id from municipalities where name like concat('%', {value}, '%'))`. Ověřit `EXPLAIN` a výsledky s filtrem i bez něj. Sloupec „Obec“ se podle názvu neřadí, poddotaz se tedy nevyhodnotí pro všechny řádky. Cenu samotného OFFSET (400 tis. čtení indexu) to neřeší, to by vyžadovalo stránkování podle klíče. HTML výpisu má zůstat stejné.
+- [x] **Výpis vlastníků: zbytečné dotazy** (v2.7.9, 2026-11-26)
+  - Problém: pro každý řádek se zvlášť načítal název obce, počet parcel a parcely v obci, přes 100 dotazů na stránku.
+  - Řešení: načítají se jednou za stránku, 5–6 dotazů. Výpis vypadá stejně.
+- [x] **Odkaz „vlastníci“ u obce** (v2.7.11, 2026-11-26)
+  - Problém: odkaz posílal název obce a filtr hledal část názvu, takže „Lhota“ našla i Horní, Dolní… Lhota (20 000 vlastníků místo 240).
+  - Řešení: odkaz vybírá přesně jednu obec (rozhodnutí z 26. 11. 2026, otázka 1). Ve filtrech je popisek „Obec: název ×“. Sloupec „V obci“ se počítá podle obce parcely v databázi. Textové pole „Obec“ se nemění.
+- [ ] **Filtr obce ve výpisu vlastníků: textové pole**
+  - Problém: textové pole „Obec“ hledá část názvu, takže „Lhota“ najde i Horní, Dolní… Lhota a výpis je pomalý. Význam filtru rozhodnut (otázka 1, varianta a): obec vlastníka, jako dosud.
+  - Řešení: po krocích, zatím částečně.
+    - Hotovo: parcely pro „V obci“ jedním dotazem za stránku (úkol 2).
+    - Hotovo: odkaz u obce podle id a „V obci“ v databázi (položka výše).
+    - Hotovo: index na obec vlastníka (položka níže) běžné hledání zrychlil.
+    - Hotovo: jedno písmeno se ignoruje, minimální délka 2 znaky (otázka 7, položka v *Ostatní*).
+    - Zbývá: hledání části názvu prochází všechny obce. Text od 2 znaků, který najde přes asi 40 % vlastníků, je s indexem pomalejší než bez něj (`MIGRATION.md`, 5.3).
+- [x] **Výpisy parcel a obcí: zbytečné dotazy** (v2.7.10, 2026-11-26)
+  - Problém: vlastníci každé parcely a počet parcel každé obce se načítali zvlášť, přes 50 dotazů na stránku.
+  - Řešení: 5 dotazů na stránku, bez nového indexu. Výpisy vypadají stejně.
+- [x] **Index na vlastnické vztahy podle vlastníka** (v2.7.9, 2026-11-26)
+  - Problém: chyběl, každý dotaz na parcely vlastníka procházel 1,2 mil. řádků.
+  - Řešení: index jako SQL migrace 001 (`MIGRATION.md`). Index na obec vlastníka tehdy záměrně ne, protože by přeskupil vlastníky se stejným jménem na stranách.
+- [x] **Výchozí řazení vlastníků** (v2.8.2, 2026-11-26)
+  - Problém: řazení podle jména nemohlo použít index, každá strana řadila všech 500 tis. vlastníků. Pořadí vlastníků se stejným jménem bylo náhodné.
+  - Řešení: rozhodnuto otázkou 5 (varianta b). Řadí se podle příjmení, jména a id s indexem (SQL migrace 002, `MIGRATION.md`, 5.2).
+    - Pořadí jmen se na testovacích datech nezměnilo. Vlastníci se stejným jménem jsou teď seřazení podle id, na stranách jsou proto jiní než dříve.
+    - První strany výpisu jsou výrazně rychlejší, hledání zůstává jako dříve.
+    - Filtr „neoslovovat“ na vzdálenějších stranách čte víc dat. Doba je stejná nebo nižší, se studenou cache databáze může být horší.
+- [x] **Index na obec vlastníka** (v2.8.3, 2026-11-26)
+  - Problém: poslední vazba bez indexu, filtr podle obce procházel všechny vlastníky.
+  - Řešení: index jako SQL migrace 003 (`MIGRATION.md`, 5.3), kód se nemění.
+    - Filtr podle obce a noční report jsou výrazně rychlejší, běžné textové hledání obce také.
+    - Velmi široký textový filtr (jedno písmeno) je pomalejší, řeší minimální délka (otázka 7).
+    - Výstup všech stránek je před a po stejný.
+    - K ověření na produkci: řazení podle „Založeno“ s filtrem obce (bod (b) v *Chyby v logice*, `MIGRATION.md`, 5.3). Cizí klíče řeší otázka 6.
+- [ ] **Výpis parcel: název obce**
+  - Problém: na vzdálených stranách výpisu parcel databáze zbytečně hledá obec i pro přeskočené řádky (asi 5× pomalejší).
+  - Řešení: název obce načítat jen pro řádky stránky. Ověřit výsledky s filtrem i bez něj, výpis má vypadat stejně. Cenu přeskakování samotného to neřeší.
+    - Prozkoumaný postup: název obce poddotazem místo joinu, filtr „Obec“ přes id obcí, jejichž název odpovídá textu. Změřeno na vzdálené straně asi 0,5 s → 0,1 s.
 
 ### Chyby v logice
 
-- [x] Export: limit 20 000 se uplatní před vynecháním vlastníků se zákazem oslovení, export pak může mít méně řádků, než odpovídá filtru. Vlastníci se zákazem oslovení se vynechávají už v SQL (bez parametru `all`), limit tak počítá jen exportované řádky; počet vynechaných pro řádek „Vynecháno N…“ dává samostatný `count(*)` a týká se všech vlastníků odpovídajících filtru. (v2.7.6, 2026-11-26)
-- [x] `owner_parcels()` vrací pro vlastníka bez parcel `null` místo prázdného pole. Opraveno při migraci na PHP 8 (`count(null)` je tam `TypeError`); na 7.4 se chování nemění.
-- [x] `trim_text()` (`includes/functions.php`) porovnává délku v bajtech (`strlen`), ale zkracuje ve znacích (`mb_substr`). Krátký text s diakritikou dostane „…“, i když se nic neuřízlo: `trim_text('žluťoučký', 10)` → `žluťoučký…`. Projeví se na přehledu u poznámek. Délka se porovnává ve znacích (`mb_strlen`). (v2.7.6, 2026-11-26)
-- [x] `format_datetime('0000-00-00')` (datum bez času) nebere jako prázdnou hodnotu a vrátí `30. 11. -0001 00:00`. Bere ho jako prázdné stejně jako `format_date()`. (v2.7.6, 2026-11-26)
-- [x] `Database::getWhere()` z hodnoty v uvozovkách odstraní všechny apostrofy, ne jen okrajové: `o.last_name = 'O'Brien'` naváže `OBrien`. Odstraňují se jen okrajové apostrofy. (v2.7.6, 2026-11-26)
-- [x] Vlastnický vztah s `share_den = 0` (`ownerships`, schéma to dovoluje): výpočet `výměra × share_num / share_den` v detailu vlastníka (`admin_owners/owners_detail.php:63`, `:135`) a ve sloupci „V obci“ výpisu s filtrem obce (`includes/functions.php:174`). Na PHP 7.4 skryté varování a výměra podílu „inf ha“ (při nulové výměře „nan m²“), na PHP 8.x nezachycená `DivisionByZeroError` – detail a výpis s filtrem obce spadnou. Testovací data `share_den = 0` nemají. Výpočet je ve funkci `share_area()`: podíl se jmenovatelem 0 přispívá do součtů nulou a „Výměra podílu“ ukazuje „–“, sloupec „Podíl“ dál `num/den`. Kontrola dat na produkci je doporučená, ne nutná (viz `MIGRATION.md`). (v2.7.6, 2026-11-26)
-- [x] Pole v parametrech GET/POST se po přetypování `(string)` (migrace na PHP 8) hledají nebo ukládají jako text „Array“, na 7.4 i 8.x; dříve je 7.4 ignorovalo (hodnota `null`). Např. `index.php?url=owners&search[]=x` hledá „Array“ (`class/Section.php:112`), POST `title[]=x` při úpravě vlastníka uloží titul „Array“ (`admin_owners/owners_edit.php:19`). Jen ručně vytvořené požadavky. `get_param()` / `post_param()` pro pole vrátí výchozí hodnotu (žádný parametr aplikace pole není), jako by parametr chyběl. (v2.7.6, 2026-11-26)
-- [x] `admin_owners/owners_edit.php:81`: ručně odeslaný `duedate` jako `0.5` se po chybě validace zobrazí ve formuláři prázdný místo `0.5` (`(int)'0.5' == 0`, dříve `'0.5' == 0` neplatilo). Jen ručně vytvořený požadavek, prohlížeč posílá datum `RRRR-MM-DD`. Prázdné pole se ukáže jen pro nulové datum z DB (`'0000-00-00'`). (v2.7.6, 2026-11-26)
-- [x] Obří hodnota `page` (např. `page=99999999999999999999`): `intval()` dá `PHP_INT_MAX`, `($page - 1) * $limit` je pak `float` a v SQL vznikne `limit 4.6116860184274E+20, 50` – chyba SQL a prázdný výpis místo poslední strany (`class/Section.php:47`, `:198`). Jen ručně zadaná adresa. Ověřeno (obce: „strana 9223372036854775807 z 125“, „Nebyly nalezeny…“, chyba v `logs/sql_error.log`). `Section::show()` omezí stranu na rozsah 1 až poslední strana; strana za koncem výpisu tak ukáže poslední stranu místo „Nebyly nalezeny…“. Export (`getRows(false)`) stranu nepoužívá. (v2.7.8, 2026-11-26)
-- [x] `format_share('0', '0')` vrátí „celý“ (`num == den`), přitom „Výměra podílu“ vedle ukazuje „–“ jako neplatný podíl (`format_share()` v `includes/functions.php`). Ověřeno unit testem. Se jmenovatelem 0 vrací `num/den` (`0/0`), „celý“ jen pro `num == den` a jmenovatel různý od 0. (v2.7.8, 2026-11-26)
-- [x] Výpis parcel: pořadí vlastníků se stejným příjmením v buňce „Vlastníci“ je neurčené (`order by o.last_name` bez dalšího klíče, `admin_parcels_main.php`, `parcels_owners()` v `includes/functions.php`). Dvě načtení stejné adresy dávají jiné pořadí: `index.php?url=parcels&search=st.%20121`, parcela 19020 (Jedlinka pod Horou, st. 121; 16 vlastníků, 10 různých příjmení) ukázala jednou Václav Kratochvíl (484940), Václav Kratochvíl (64940), Radek Kratochvíl (204940), podruhé Radek Kratochvíl (204940) před oběma Václavy. Stejně se pak mění pořadí čísel v buňce „LV“ (sestavuje se v pořadí vlastníků; 66 378 parcel má víc LV). Ověřeno na PHP 7.4 i 8.5, platí už před odstraněním N+1. Řešení: doplnit řazení o jednoznačný klíč (např. `o.last_name, o.first_name, o.id`); mění pořadí na stránce, proto samostatně. V docblocku `parcels_owners()` dnes stojí jen „ordered by last name“, neurčenost tam není zmíněná; opravit spolu s řazením. Vlastníci parcely se řadí `o.last_name, o.first_name, o.id, os.id`: jméno a id vlastníka dávají jednoznačné pořadí, `os.id` je poslední klíč, protože schéma nebrání dvěma vztahům stejného vlastníka k jedné parcele (v datech 0 případů). Docblock popisuje řazení i shody. Opakovaná načtení 13 adres výpisu (filtry, hledání, řazení, strany) bajtově shodná, 7.4 = 8.5; po seřazení vlastníků a LV uvnitř buněk shodné se stavem před změnou. `EXPLAIN` beze změny (`range` na `idx_ownerships_parcel`, filesort ~73 řádků byl i dříve). Smoke test parcel 19020 a 35 (dvě „Černá“ s jiným LV, pořadí LV teď `1589, 883`). (v2.8.1, 2026-11-26)
-- [ ] Neurčené pořadí řádků se shodným klíčem řazení i jinde (nalezeno při opravě pořadí vlastníků parcely, zatím se neprojevilo). (a) Detail vlastníka: `owner_parcels()` řadí `m.name, p.cadastral_area, p.parcel_number` a různé parcely se stejným číslem ve stejném k. ú. jsou časté: 291 682 skupin, 683 365 vztahů (vlastník 3: tři parcely „2494“ v Nové Jilmové nad Řekou s jinou výměrou, druhem a podílem). Šest načtení detailu vlastníků 1, 3 a 4 a 7.4 proti 8.5 dalo stejné HTML, SQL ale pořadí nezaručuje (`Using temporary; Using filesort`). Řešení: doplnit `p.id`, stejně v `owners_parcels()`, která řadí stejně (jen sčítá, výstup na pořadí prakticky nezávisí, až na zaokrouhlení součtu na hranici). (b) Řazení podle sloupce v `Section::getOrder()` je jen podle zvoleného sloupce, bez jednoznačného klíče, a s `limit` může řádek se shodnou hodnotou přeskočit mezi stranami nebo se ukázat dvakrát: parcely podle k. ú. (9 375 hodnot na 800 tis. parcel) a výměry (37 519 hodnot), obce podle okresu (20) a kraje (7). Ověřeno: všech 125 stran obcí podle okresu i kraje dnes obsahuje každou z 6 250 obcí právě jednou, 5 načtení řazení parcel podle k. ú. a výměry bylo shodných; zaručené to není. Řešení: přidat id tabulky (`Section::setTableId()`) jako poslední klíč, mění pořadí na stranách, proto samostatně. Výchozí řazení vlastníků je samostatná položka v *Výkon*. `o.created_at` má na testovacích datech 500 000 různých hodnot; na produkci nemusí být jedinečné (výchozí `0000-00-00 00:00:00`, importy), a od migrace 3 se s filtrem obce mění plán řazení podle „Založeno“, takže vlastníci se shodným časem by se mohli přeskupit (ověřovací dotaz v `MIGRATION.md`, 5.3).
-- [x] `format_area()` zaokrouhluje hodnotu těsně pod polovinou jinak na PHP 7.4 a 8.5: `0.49999999999999994` (součet podílů 1/3 + 1/12 + 1/12 z 1 m² v plovoucí čárce) ukáže na 7.4 „1 m²“, na 8.5 „0 m²“ (rozdíl v zaokrouhlování `number_format()` mezi verzemi). Týká se sloupce „V obci“ (textový filtr i filtr podle id, `share_area()` / `owners_parcels_in_municipality()`) a detailu vlastníka. Jen na přesné hranici zaokrouhlení, testovací data ji nezasáhnou (Lhota na obou verzích stejně). Ověřeno skriptem na doslovných hodnotách při v2.7.11. Příčina: PHP 8.4 v `round()` (a tím v `number_format()`) zrušilo „pre-rounding“ na 15 platných číslic, které 7.4 dělalo od 1 výše (UPGRADING 8.4, GH-12143), a přepsalo zaokrouhlení na celé číslo, které 7.4 pod 1 dělalo jako `floor(x + 0.5)` (tím vycházelo `0.49999999999999994` jako 1); stejně se liší i `round()` v detailu vlastníka a v hektarech např. součet podílů přesně 118 450 m² (11,84 ha místo 11,85 ha). `format_area()` i `round()` v detailu vlastníka teď dostávají hodnotu předzaokrouhlenou na 15 platných číslic stejnými kroky v plovoucí čárce jako v 7.4 (`area_value()`); pevný počet desetinných míst by u velkých součtů (např. 5 000 049,5 m² v detailu) nestačil a `round($x, 14 - floor(log10 $x))` dává na 8.5 v 16. číslici jiný výsledek než 7.4 (např. 4,499999999999995 → „5 m²“ místo „4 m²“). Na 3 014 013 hodnotách (celá čísla, poloviny, podíly, náhodné součty podílů do 1e8 m², hodnoty x,5 se sousedními hodnotami v plovoucí čárce do 1e9, kolem hranic setin ha do 1e8 m²) a na 1 220 122 hodnotách ±30 nejmenších kroků kolem x,5 pro x do 10 000 je výstup na 7.4 a 8.5 shodný a rovný dosavadnímu výstupu 7.4, kromě 16 hodnot pod 1. Pod 1 m² se pár hodnot těsně pod 0,5 nově zaokrouhlí nahoru i na 7.4 (reálně jen výměra podílu malé parcely). HTML detailu vlastníka, výpisů vlastníků s filtrem obce a parcel beze změny. (v2.8.4, 2026-11-26)
+- [x] **Export: méně řádků, než odpovídá filtru** (v2.7.6, 2026-11-26)
+  - Problém: limit 20 000 řádků se počítal i z vynechaných vlastníků se zákazem oslovení.
+  - Řešení: vynechávají se už v databázi, limit počítá jen exportované řádky.
+- [x] **Vlastník bez parcel**
+  - Problém: funkce vrátila „nic“ místo prázdného seznamu.
+  - Řešení: opraveno při migraci na PHP 8, na 7.4 se chování nemění.
+- [x] **Zkracování textu s diakritikou** (v2.7.6, 2026-11-26)
+  - Problém: krátká poznámka s diakritikou dostala na přehledu „…“, i když se nic neuřízlo.
+  - Řešení: délka se počítá ve znacích.
+- [x] **Prázdné datum bez času** (v2.7.6, 2026-11-26)
+  - Problém: ukázalo se jako „30. 11. -0001 00:00“.
+  - Řešení: bere se jako prázdné.
+- [x] **Apostrofy ve jménu** (v2.7.6, 2026-11-26)
+  - Problém: z „O'Brien“ se při hledání stalo „OBrien“.
+  - Řešení: odstraňují se jen okrajové apostrofy.
+- [x] **Podíl se jmenovatelem 0** (v2.7.6, 2026-11-26)
+  - Problém: na PHP 8 detail vlastníka a výpis s filtrem obce spadnou, na 7.4 ukázaly „inf ha“. Testovací data takový podíl nemají.
+  - Řešení: podíl přispívá nulou, „Výměra podílu“ ukazuje „–“. Kontrola dat na produkci je doporučená (`MIGRATION.md`).
+- [x] **Pole v parametrech jako text „Array“** (v2.7.6, 2026-11-26)
+  - Problém: podvržený požadavek hledal nebo uložil text „Array“ (např. jako titul vlastníka).
+  - Řešení: pole se ignoruje, jako by parametr chyběl.
+- [x] **Ručně odeslaný termín `0.5`** (v2.7.6, 2026-11-26)
+  - Problém: po chybě validace se ve formuláři ukázal prázdný.
+  - Řešení: prázdné pole jen pro nulové datum z databáze.
+- [x] **Obří číslo strany** (v2.7.8, 2026-11-26)
+  - Problém: ručně zadaná strana mimo rozsah skončila chybou SQL a prázdným výpisem.
+  - Řešení: strana se omezí na rozsah 1 až poslední strana.
+- [x] **Podíl 0/0 jako „celý“** (v2.7.8, 2026-11-26)
+  - Problém: podíl ukazoval „celý“, přitom výměra vedle „–“.
+  - Řešení: ukazuje `0/0`.
+- [x] **Výpis parcel: pořadí vlastníků se stejným příjmením** (v2.8.1, 2026-11-26)
+  - Problém: při každém načtení stránky mohlo být jiné (i pořadí čísel LV).
+  - Řešení: řadí se podle příjmení, jména a id, pořadí je pokaždé stejné.
+- [ ] **Neurčené pořadí řádků i jinde** (zatím se neprojevilo)
+  - Problém: kde se řadí podle hodnoty, kterou má víc řádků, databáze pořadí nezaručuje.
+    - (a) Detail vlastníka: parcely se stejným číslem ve stejném katastrálním území.
+    - (b) Řazení výpisů podle sloupce (např. katastrální území, výměra, okres): řádek se může mezi stranami přeskočit nebo ukázat dvakrát.
+  - Řešení: přidat id jako poslední klíč řazení. Mění pořadí na stranách, proto samostatně.
+  - K ověření na produkci: jestli je čas „Založeno“ u vlastníků jedinečný. Od migrace 003 se s filtrem obce může pořadí podle „Založeno“ změnit (`MIGRATION.md`, 5.3).
+- [x] **Zaokrouhlení výměry na PHP 7.4 a 8.5** (v2.8.4, 2026-11-26)
+  - Problém: hodnota těsně pod polovinou se na 8.5 zaokrouhlila jinak než na 7.4 (např. „0 m²“ místo „1 m²“, „11,84 ha“ místo „11,85 ha“). Jen na přesné hranici, testovací data ji nezasáhnou.
+  - Řešení: aplikace napodobuje zaokrouhlení ze 7.4, výstup je na obou verzích stejný. Pod 1 m² se pár hodnot nově zaokrouhlí nahoru i na 7.4.
 
 ### Ostatní
 
-- [x] Přidat testy (zatím žádné nejsou) – viz úkol 0 v zadání.
-- [x] Výpis obcí: vedle odkazu „vlastníci“ odkaz „parcely“ na výpis parcel obce podle id (`f_municipality_id`, skrytý filtr `p.municipality_id = {value}` přes `Section::addHiddenFilter()` v `admin_parcels_main.php`, popisek „Obec: název ×“). Oba odkazy vypadají jako malá tlačítka (`a.button.small`). Textový filtr „Obec“ ve výpisu parcel (podřetězec) se nemění. Požadavek zadavatele. (v2.8.0, 2026-11-26)
-- [x] Textový filtr „Obec“ ve výpisu vlastníků: minimální délka 2 znaky (rozhodnutí z 26. 11. 2026, `OPENQUESTIONS.md`, otázka 7, varianta b). Kratší text se ignoruje, výpis se ukáže bez textového filtru obce a u pole je upozornění. Stejná mez jako našeptávač (`ajax_municipalities.php`, `js/app.js`). Nová metoda `Section::setFilterMinLength()`, volaná v `owners_build_section()`: text kratší než 2 znaky (`mb_strlen` po `trim`) se do SQL nedostane a `hasFilter()` je `false`, takže výpis, počet, sloupec „V obci“ i export CSV jsou jako bez textového filtru obce; text zůstane v poli a vedle něj je „zadejte aspoň 2 znaky“. Skrytý filtr podle id obce beze změny. Výpis parcel (vlastní textový filtr „Obec“) se nemění. Našeptávač obcí počítá mez nově také ve znacích (`mb_strlen` v `ajax_municipalities.php`, `trim()` v `js/app.js`), dříve v bajtech („Č“ prošlo). (v2.9.0, 2026-11-27)
-- [x] Zástupný text pole „Hledat“ je napevno v `Section` („jméno, příjmení nebo IČO“, `class/Section.php`) a ukazuje se i ve výpisu parcel, který hledá podle čísla parcely a kódu k. ú. (`admin_parcels_main.php`). Text předat přes `setSearch()`, vlastníci beze změny, parcely „číslo parcely nebo kód k. ú.“. Dělá se spolu s minimální délkou filtru obce (požadavek zadavatele). `setSearch()` má volitelný třetí parametr se zástupným textem (bez něj pole žádný nemá): vlastníci „jméno, příjmení nebo IČO“, parcely „číslo parcely nebo kód k. ú.“, obce (hledají podle názvu a kódu, dosud také „jméno, příjmení nebo IČO“) „název nebo kód obce“. (v2.9.0, 2026-11-27)
+- [x] **Přidat testy**
+  - Problém: aplikace neměla žádné testy.
+  - Řešení: viz úkol 0.
+- [x] **Výpis obcí: odkaz „parcely“** (v2.8.0, 2026-11-26)
+  - Cíl: požadavek zadavatele, z obce přejít na její parcely.
+  - Řešení: vedle „vlastníci“ odkaz „parcely“ (přesně jedna obec, popisek „Obec: název ×“). Oba odkazy jako malá tlačítka.
+- [x] **Textový filtr „Obec“ ve výpisu vlastníků: minimální délka 2 znaky** (v2.9.0, 2026-11-27)
+  - Cíl: rozhodnutí z 26. 11. 2026 (otázka 7, varianta b), jednopísmenný filtr nic nefiltruje a je pomalý.
+  - Řešení: kratší text se ignoruje (výpis i export), u pole je „zadejte aspoň 2 znaky“. Našeptávač počítá mez nově také ve znacích, ne v bajtech. Výpis parcel se nemění.
+- [x] **Zástupný text pole „Hledat“** (v2.9.0, 2026-11-27)
+  - Problém: všechny výpisy ukazovaly „jméno, příjmení nebo IČO“, i parcely a obce.
+  - Řešení: každý výpis má vlastní text. Vlastníci beze změny, parcely „číslo parcely nebo kód k. ú.“, obce „název nebo kód obce“.
