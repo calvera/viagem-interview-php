@@ -4,6 +4,17 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.9.0] – 2026-11-27
+
+### Změněno
+
+- Textový filtr „Obec“ ve výpisu vlastníků se uplatní až od 2 znaků, stejně jako našeptávač obcí (rozhodnutí z otázky 7 v `OPENQUESTIONS.md`, varianta b). Kratší text (po `trim`, počítáno ve znacích) se ignoruje: výpis, počet, sloupec „V obci“ i export CSV jsou jako bez textového filtru obce, text zůstane v poli a vedle něj je upozornění „zadejte aspoň 2 znaky“. Jedno písmeno našlo až 93 % vlastníků a s indexem `idx_owners_municipality` byl dotaz 2,2× až 2,6× pomalejší než bez něj. Nová metoda `Section::setFilterMinLength()`. Filtr podle id obce a výpis parcel beze změny.
+- Zástupný text pole „Hledat“ se předává v `Section::setSearch()` (volitelný třetí parametr) místo pevného „jméno, příjmení nebo IČO“ v `Section`: parcely „číslo parcely nebo kód k. ú.“, obce „název nebo kód obce“, vlastníci beze změny.
+
+### Opraveno
+
+- Našeptávač obcí počítal minimální délku 2 v bajtech (`strlen` v `ajax_municipalities.php`), takže samotné „Č“ už hledalo. Teď počítá znaky (`mb_strlen`) a `js/app.js` délku po `trim()`, stejně jako filtr obce. Smoke test `q=Č` vrátí prázdný seznam.
+
 ## [2.8.4] – 2026-11-26
 
 ### Opraveno

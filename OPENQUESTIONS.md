@@ -146,4 +146,4 @@ Běžné části názvu obce jsou s indexem 4× až 16× levnější (podle str�
 
 **Souvislosti:** `TODO.md`, položky *Filtr obce ve výpisu vlastníků: textové pole* a *Index na `owners.municipality_id`*; `MIGRATION.md`, 5.3.
 
-**Výsledek:** varianta b), minimální délka 2 znaky jako u našeptávače. Kratší text se ignoruje, výpis se ukáže bez textového filtru obce a u pole je upozornění. Viz položka *Filtr obce ve výpisu vlastníků: minimální délka textu* v `TODO.md`.
+**Výsledek:** varianta b), minimální délka 2 znaky jako u našeptávače. Kratší text se ignoruje, výpis se ukáže bez textového filtru obce a u pole je upozornění. Provedeno v rámci položky *Textový filtr „Obec“ ve výpisu vlastníků: minimální délka 2 znaky* (`TODO.md`, *Ostatní*): `Section::setFilterMinLength()` v `owners_build_section()`, platí pro výpis i export CSV. Vydáno ve v2.9.0.

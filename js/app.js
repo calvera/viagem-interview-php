@@ -45,7 +45,7 @@
 
     function load() {
       var q = input.value;
-      if (q.length < 2) {
+      if (q.trim().length < 2) {
         list.style.display = 'none';
         return;
       }

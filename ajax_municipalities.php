@@ -6,7 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 $q = trim(get_param('q', ''));
 
-if (strlen($q) < 2)
+if (mb_strlen($q) < 2)
 {
   echo json_encode(array());
   exit;

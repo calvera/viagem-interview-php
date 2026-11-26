@@ -125,6 +125,14 @@ class PagesTest extends TestCase
     $this->assertSame('[]', $response['body']);
   }
 
+  public function testAutocompleteCountsCharactersNotBytes()
+  {
+    $response = $this->get('/ajax_municipalities.php?q=' . rawurlencode('Č'));
+
+    $this->assertSame(200, $response['status']);
+    $this->assertSame('[]', $response['body']);
+  }
+
   public function testAutocompleteIgnoresArray()
   {
     $response = $this->get('/ajax_municipalities.php?q%5B%5D=Lh');
@@ -349,6 +357,82 @@ class PagesTest extends TestCase
     $lines = array_slice(explode("\n", trim($response['body'])), 2);
     $this->assertCount(240, $lines);
     foreach ($lines as $line) $this->assertSame('Lhota', str_getcsv($line, ';', '"', '')[10]);
+  }
+
+  /**
+   * The text filter "Obec" shorter than 2 characters is ignored (OPENQUESTIONS.md, question 7): the full list
+   * without the "V obci" column, the text stays in the field with a note. No municipality name contains "x",
+   * so the filter, if applied, would find nothing.
+   *
+   * @dataProvider shortMunicipalityProvider
+   */
+  public function testShortMunicipalityFilterIsIgnored($value, $shown)
+  {
+    $response = $this->get('/index.php?url=owners&f_municipality=' . $value);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringContainsString('Nalezeno <b>500 000</b> vlastníků', $response['body']);
+    $this->assertStringContainsString('name="f_municipality" value="' . $shown . '" data-autocomplete="municipality" autocomplete="off"> '
+      . '<small class="filter_note">zadejte aspoň 2 znaky</small>', $response['body']);
+    $this->assertStringNotContainsString('V obci</th>', $response['body']);
+  }
+
+  public function shortMunicipalityProvider()
+  {
+    return array(
+      'one letter' => array('x', 'x'),
+      'one multibyte letter with spaces' => array('%20%C5%BD%20', 'Ž'),
+    );
+  }
+
+  public function testTwoLetterMunicipalityFilterApplies()
+  {
+    $response = $this->get('/index.php?url=owners&f_municipality=xy');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertStringContainsString('Nalezeno <b>0</b> vlastníků', $response['body']);
+    $this->assertStringNotContainsString('<small class="filter_note">', $response['body']);
+  }
+
+  public function testShortMunicipalityFilterKeepsFilterById()
+  {
+    $response = $this->get('/index.php?url=owners&f_municipality_id=1&f_municipality=x');
+
+    $this->assertSame(200, $response['status']);
+    $this->assertStringContainsString('Nalezeno <b>240</b> vlastníků', $response['body']);
+    $this->assertStringContainsString('<th style="width: 10%">V obci</th>', $response['body']);
+    $this->assertStringContainsString('<small class="filter_note">zadejte aspoň 2 znaky</small>', $response['body']);
+  }
+
+  public function testExportIgnoresShortMunicipalityFilter()
+  {
+    $response = $this->get('/index.php?url=owners/export&search=01256748&f_municipality=x&all=1');
+
+    $this->assertSame(200, $response['status']);
+    $lines = array_slice(explode("\n", trim($response['body'])), 2);
+    $this->assertCount(1, $lines);
+    $this->assertSame('Statek Lhota spol. s r.o.', str_getcsv($lines[0], ';', '"', '')[4]);
+  }
+
+  /**
+   * @dataProvider searchPlaceholderProvider
+   */
+  public function testSearchPlaceholder($path, $placeholder)
+  {
+    $response = $this->get($path);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertStringContainsString('<input type="text" name="search" value="" placeholder="' . $placeholder . '">', $response['body']);
+  }
+
+  public function searchPlaceholderProvider()
+  {
+    return array(
+      'owners' => array('/index.php?url=owners&f_type=P', 'jméno, příjmení nebo IČO'),
+      'parcels' => array('/index.php?url=parcels', 'číslo parcely nebo kód k. ú.'),
+      'municipalities' => array('/index.php?url=municipalities', 'název nebo kód obce'),
+    );
   }
 
   /**

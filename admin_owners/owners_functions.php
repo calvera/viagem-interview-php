@@ -14,6 +14,8 @@ function owners_build_section(?Section $section = null, $for_export = false)
 
   $section->addHiddenFilter('municipality_id', 'Obec', 'o.municipality_id = {value}', 'select name from municipalities where id = {value}');
   $section->addFilter('municipality', 'Obec', 'autocomplete', "m.name like concat('%', {value}, '%')");
+  // Same limit as the municipality autocomplete (OPENQUESTIONS.md, question 7).
+  $section->setFilterMinLength('municipality', 2);
   $section->addFilter('type', 'Typ', 'select', 'o.type = {value}', array('F' => 'Fyzická osoba', 'P' => 'Právnická osoba'));
   $section->addFilter('dnc', 'Neoslovovat', 'select', 'o.do_not_contact = {value}', array('1' => 'ano', '0' => 'ne'));
 
@@ -30,7 +32,7 @@ function owners_build_section(?Section $section = null, $for_export = false)
     $section->addSQLWhereString("o.ico = '" . $ico . "'");
     $search = '';
   }
-  $section->setSearch(array('o.last_name', 'o.first_name'), $search);
+  $section->setSearch(array('o.last_name', 'o.first_name'), $search, 'jméno, příjmení nebo IČO');
 
   // Columns instead of concat(): the page is read from index idx_owners_name (last_name, first_name, id),
   // id makes the order unique (OPENQUESTIONS.md, question 5). Changing this sort breaks the use of the index.

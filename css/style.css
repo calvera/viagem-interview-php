@@ -242,6 +242,10 @@ table.detail td {
   color: #9aa5b0;
 }
 
+.filter_note {
+  color: #c0392b;
+}
+
 .overdue {
   color: #c0392b;
   font-weight: bold;

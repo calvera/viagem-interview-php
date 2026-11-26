@@ -19,6 +19,7 @@ class Section
   public $detail_url;
   public $export_url;
   public $search_value;
+  public $search_placeholder = '';
   public $sort;
   public $sort_dir;
   public $default_sort;
@@ -124,6 +125,20 @@ class Section
     $this->filters[$id] = $filter;
   }
 
+  /**
+   * A text filter shorter than $length characters (after trim) is ignored: no SQL and hasFilter() is false.
+   * The text stays in the field with a short note next to it.
+   */
+  function setFilterMinLength($id, $length)
+  {
+    $value = $this->filters[$id]['value'];
+    if ($value === '' || mb_strlen($value, 'UTF-8') >= $length) return;
+
+    $this->filters[$id]['value'] = '';
+    $this->filters[$id]['input'] = $value;
+    $this->filters[$id]['note'] = 'zadejte aspoň ' . $length . ($length < 5 ? ' znaky' : ' znaků');
+  }
+
   function getFilterValue($id)
   {
     if (!isset($this->filters[$id])) return '';
@@ -135,10 +150,14 @@ class Section
     return strlen($this->getFilterValue($id)) > 0;
   }
 
-  function setSearch($items, $value)
+  /**
+   * Search field over $items (like %value%); $placeholder is the hint shown in the empty field (none when empty).
+   */
+  function setSearch($items, $value, $placeholder = '')
   {
     $this->search_items = $items;
     $this->search_value = trim((string)$value);
+    $this->search_placeholder = $placeholder;
   }
 
   function setSortBy($sort, $dir = 'asc')
@@ -293,14 +312,17 @@ class Section
       else
       {
         $attr = $f['type'] == 'autocomplete' ? ' data-autocomplete="' . $f['id'] . '" autocomplete="off"' : '';
-        $html .= '<input type="text" name="f_' . $f['id'] . '" value="' . h($f['value']) . '"' . $attr . '>';
+        $value = isset($f['input']) ? $f['input'] : $f['value'];
+        $html .= '<input type="text" name="f_' . $f['id'] . '" value="' . h($value) . '"' . $attr . '>';
+        if (isset($f['note'])) $html .= ' <small class="filter_note">' . $f['note'] . '</small>';
       }
       $html .= '</label> ';
     }
 
     if (count($this->search_items))
     {
-      $html .= '<label>Hledat <input type="text" name="search" value="' . h($this->search_value) . '" placeholder="jméno, příjmení nebo IČO"></label> ';
+      $placeholder = $this->search_placeholder !== '' ? ' placeholder="' . h($this->search_placeholder) . '"' : '';
+      $html .= '<label>Hledat <input type="text" name="search" value="' . h($this->search_value) . '"' . $placeholder . '></label> ';
     }
 
     $html .= '<button type="submit">Filtrovat</button> ';

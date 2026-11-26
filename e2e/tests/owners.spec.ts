@@ -35,6 +35,18 @@ test('filter by municipality adds column "V obci"', async ({ page }) => {
   await expect(page.getByRole('columnheader', { name: 'V obci' })).toBeVisible();
 });
 
+test('one-letter municipality is ignored with a note', async ({ page }) => {
+  await page.goto('/index.php?url=owners');
+  await page.getByLabel('Obec').fill('x');
+  await page.getByRole('button', { name: 'Filtrovat' }).click();
+
+  await expect(page).toHaveURL(/f_municipality=x/);
+  await expect(page.getByLabel('Obec')).toHaveValue('x');
+  await expect(page.locator('.filter_note')).toHaveText('zadejte aspoň 2 znaky');
+  await expect(info(page)).toContainText('Nalezeno 500 000 vlastníků');
+  await expect(page.getByRole('columnheader', { name: 'V obci' })).toHaveCount(0);
+});
+
 test('search by IČO finds the company', async ({ page }) => {
   await page.goto('/index.php?url=owners');
   await page.getByLabel('Hledat').fill('01256748');
