@@ -4,6 +4,18 @@ Interní webová aplikace pro evidenci vlastníků pozemků: vlastníci, jejich 
 
 Všechna data jsou syntetická, generují se při prvním startu databáze.
 
+## Funkce
+
+- **Přehled** – počty záznamů, poslední poznámky, historie a poslední noční report.
+- **Vlastníci** – výpis s filtrem podle obce, typu a zákazu oslovení, hledání podle jména nebo IČO, detail s parcelami a podíly, poznámky, úprava údajů, export do CSV.
+- **Parcely** – výpis s filtrem podle obce a druhu pozemku, hledání podle čísla parcely nebo kódu katastrálního území.
+- **Obce** – výpis s filtrem podle okresu a kraje, odkaz na vlastníky v obci.
+- **Noční report** – souhrnné statistiky do `reports/`, záznam do `report_runs` a odeslání na reportovací službu.
+
+Aplikace nemá přihlášení, uživatel je pevně nastavený v `includes/config.php`.
+
+Známé problémy jsou v [TODO.md](TODO.md), změny v [CHANGELOG.md](CHANGELOG.md). Kód zatím na PHP 8 nefunguje (viz TODO).
+
 ## Spuštění
 
 Potřebujete Docker (Docker Desktop) a volné porty 8074, 8085 a 33061.
@@ -41,5 +53,6 @@ Zastavení: `docker compose down`. Smazání včetně databáze: `docker compose
 - `class/Section.php` – obecný výpis s filtry, hledáním, řazením a stránkováním
 - `ajax_municipalities.php` – našeptávač obcí (`?q=`)
 - `cron/nightly_report.php` – noční report
+- `layout/`, `css/`, `js/` – hlavička a patička stránky, styly, klientské skripty (potvrzení mazání, našeptávač)
 - `plugin/minify/` – přibalená knihovna třetí strany pro minifikaci CSS a JS
 - `docker/` – Dockerfile pro PHP 7.4 a 8.5, schéma a generátor dat

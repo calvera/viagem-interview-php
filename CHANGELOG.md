@@ -1,0 +1,41 @@
+# Changelog
+
+Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). Starší záznamy jsou doplněné zpětně z historie gitu. Verze aplikace (`APP_VERSION` v `includes/config.php`) se dříve k jednotlivým změnám nezapisovala, aktuální je 2.7.3.
+
+## [Nevydáno]
+
+### Přidáno
+
+- `TODO.md` se seznamem známých problémů (kompatibilita s PHP 8, bezpečnost, výkon).
+- `CHANGELOG.md`.
+- Composer s vývojovými nástroji (PHPStan 2.3, PHPUnit 9.6), platforma nastavená na PHP 7.4, aby nástroje běžely na 7.4 i 8.x.
+- `CLAUDE.md` s pravidly pro práci AI agentů (každou změnu dělá worker, kontroluje ji read-only review, dokud není čisté).
+- Skilly pro AI agenty v `.agents/skills/` (`analyse-with-phpstan`, `php-best-practices`), propojené symlinky do `.claude/skills/` a `.junie/skills/`, verze zamčené v `skills-lock.json`.
+
+### Změněno
+
+- README: přehled funkcí a odkazy na TODO a changelog.
+- `.gitignore`: ignoruje `/vendor/`.
+
+## 2026-10-27
+
+### Přidáno
+
+- Lokální prostředí v Dockeru: PHP 7.4 a 8.5, MariaDB 10.11, generátor syntetických dat.
+- README.
+
+## 2021-09-02
+
+### Přidáno
+
+- Export vlastníků do CSV.
+- Našeptávač obcí.
+- Úprava údajů vlastníka.
+- Výpis parcel.
+- Noční report (`cron/nightly_report.php`).
+
+## 2019-03-14
+
+### Přidáno
+
+- Evidence vlastníků: výpis, detail a poznámky.
