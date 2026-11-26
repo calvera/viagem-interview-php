@@ -177,7 +177,47 @@ class FunctionsTest extends TestCase
     };
 
     $this->assertNull(get_municipality_name(999999));
-    $this->assertNull(owner_parcel_count(999999));
+  }
+
+  /**
+   * Failed query: the batch lookups of the owners list return an empty map.
+   */
+  public function testBatchLookupsWithFailedQueryReturnEmpty()
+  {
+    global $db;
+
+    $db = new class {
+      public function query($sql)
+      {
+        return false;
+      }
+    };
+
+    $this->assertSame(array(), municipality_names(array(1, 2)));
+    $this->assertSame(array(), owners_parcel_counts(array(1, 2)));
+    $this->assertSame(array(), owners_parcels(array(1, 2)));
+  }
+
+  public function testSqlIntListCastsAndDeduplicates()
+  {
+    $this->assertSame('1, 0, 5', sql_int_list(array('1', null, '5', 1, "0 or 1=1")));
+  }
+
+  /**
+   * "V obci": substring match on the municipality name, case-insensitive, with share area.
+   */
+  public function testParcelsInMunicipality()
+  {
+    $parcels = array(
+      array('municipality_name' => 'Horní Lhota', 'area_m2' => '1000', 'share_num' => '1', 'share_den' => '2'),
+      array('municipality_name' => 'LHOTA', 'area_m2' => '300', 'share_num' => '1', 'share_den' => '1'),
+      array('municipality_name' => 'Habřiny', 'area_m2' => '5000', 'share_num' => '1', 'share_den' => '1'),
+      array('municipality_name' => null, 'area_m2' => null, 'share_num' => '1', 'share_den' => '1'),
+      array('municipality_name' => 'Lhota', 'area_m2' => '200', 'share_num' => '1', 'share_den' => '0'),
+    );
+
+    $this->assertSame(array('cnt' => 3, 'area' => 800), parcels_in_municipality($parcels, 'lhota'));
+    $this->assertSame(array('cnt' => 0, 'area' => 0), parcels_in_municipality(array(), 'Lhota'));
   }
 
   public function testTrimTextKeepsShortText()

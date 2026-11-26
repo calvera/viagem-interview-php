@@ -24,7 +24,7 @@ Rozhodnutí určují hlavně dvě omezení ze zadání:
 7. **Oprava logických chyb.** Chyby z revize a z testů (*Chyby v logice* v TODO), každá nejdřív prokázaná testem nebo reprodukcí: `trim_text`, `format_datetime('0000-00-00')`, apostrofy v `getWhere`, dělení nulou při `share_den = 0` (na PHP 8 pád), pole v parametrech GET/POST (text „Array“, na PHP 8 pád), `duedate` ve formuláři po chybě validace, limit exportu. Opravy až po migraci, aby migrace chování neměnila; malé změny, stejné chování na 7.4 i 8.5.
 8. **Oprava bezpečnostních chyb.** Položky z *Bezpečnost* v TODO, každá nejdřív prokázaná neškodnou reprodukcí (hledání, které vrátí všechny řádky, chyba SQL v logu, dočasná poznámka s HTML) nebo testem. Hodnoty filtrů, hledání a našeptávače jdou do SQL jako parametry; poznámka se maže formulářem POST jen u svého vlastníka; všechny formuláře mají CSRF token ze session; pole ve formuláři úpravy je chyba validace; výstupy z uživatelských dat se escapují. Malé změny bez nové vrstvy (tři krátké funkce pro CSRF), stejné výsledky pro běžné hodnoty, stejně na 7.4 i 8.5. Přihlášení zůstává otevřené: kdo a jak se přihlašuje, je rozhodnutí o produktu.
 9. **Zbývající opravy (PHP 8, bezpečnost, logika).** Poslední otevřené položky ze tří sekcí TODO, každá opět nejdřív prokázaná: dočasné řádky s `NULL` v databázi a běh s `E_ALL` (hlášení Deprecated na 8.5), noční report v dočasném kontejneru PHP 7.4 s vygenerovaným `cs_CZ.UTF-8` (čárka místo tečky), dočasný vlastník se vzorcem v exportu CSV, obří číslo strany (chyba SQL), unit testy. Opravy jsou přetypování hodnot z databáze se stejným výstupem, `LC_NUMERIC = C` (stejný formát čísel na 7.4 i 8.5 bez ohledu na locale serveru), apostrof před vzorcem v CSV (telefonní čísla beze změny) a CSV bez escape znaku, aby uvozovka za zpětným lomítkem nerozdělila buňku, odstranění nepoužívaného kódu s neošetřeným SQL, omezení strany na poslední a `format_share()` se jmenovatelem 0. Databáze je po ověření stejná jako předtím (kontrolní součty tabulek).
-10. **Zrychlení výpisu vlastníků.** Čeká.
+10. **Zrychlení výpisu vlastníků.** Nejdřív příčina z počtu SQL dotazů a `EXPLAIN` (bez měření doby stránky): N+1 dotazy, které kvůli chybějícímu indexu procházely celou tabulku `ownerships` 50× (s filtrem obce 100×) na stránku. Oprava: dávkové načtení jednou za stránku a index `ownerships.owner_id` jako SQL migrace. 103 → 5 dotazů, s filtrem obce 153 → 6; HTML výpisu bajtově shodné. Řazení a `count(*)` beze změny (viz sekce 2).
 11. **Jak naložit s celým CRM.** Čeká.
 
 Každá dokončená položka má vlastní commit, verzi v `composer.json` a git tag. Změny po verzích jsou v [CHANGELOG.md](CHANGELOG.md).
@@ -34,15 +34,15 @@ Každá dokončená položka má vlastní commit, verzi v `composer.json` a git 
 | | Stav |
 | --- | --- |
 | Aplikace na PHP 7.4 i 8.5 | hotovo (v2.7.5), připraveno k nasazení; před přepnutím serveru na 8.5 ověřit nastavení PHP na serveru; ošetřené i hodnoty `NULL` z databáze a locale |
-| Testy | 116 unit, 38 smoke, 19 Playwright; zelené na PHP 7.4 i 8.5 |
+| Testy | 122 unit, 44 smoke, 19 Playwright; zelené na PHP 7.4 i 8.5 |
 | Statická analýza | PHPStan level 2, bez chyb pro 7.4 i 8.5 |
 | Lokální prostředí | Docker: PHP 7.4 (`:8074`), PHP 8.5 (`:8085`), MariaDB se syntetickými daty |
-| Postup nasazení | [MIGRATION.md](MIGRATION.md): nastavení serveru, pořadí, návrat zpět, ověření |
+| Postup nasazení | [MIGRATION.md](MIGRATION.md): nastavení serveru, pořadí, návrat zpět, ověření, index pro výpis vlastníků |
 | Chyby v logice | opravené (TODO, *Chyby v logice*), včetně pádů na PHP 8 při `share_den = 0` a poli v parametrech, obřího čísla strany a `format_share()` se jmenovatelem 0 |
 | Bezpečnost | opravené SQL injection, CSRF, mazání poznámky (POST, jen u vlastníka), XSS, vzorce v CSV exportu (včetně uvozovek za zpětným lomítkem), odstraněný nepoužívaný kód s neošetřeným SQL; přihlášení je otevřená otázka pro zadavatele ([OPENQUESTIONS.md](OPENQUESTIONS.md)) |
-| Známé problémy | [TODO.md](TODO.md): výkon (sekce *Výkon*) |
-| Otevřené otázky pro zadavatele | [OPENQUESTIONS.md](OPENQUESTIONS.md): přihlášení uživatelů, pravidla validace vstupu |
-| Zrychlení výpisu vlastníků | čeká |
+| Známé problémy | [TODO.md](TODO.md): výkon (sekce *Výkon*: filtr obce, N+1 ve výpisu parcel a obcí, výchozí řazení vlastníků) |
+| Otevřené otázky pro zadavatele | [OPENQUESTIONS.md](OPENQUESTIONS.md): význam filtru obce, termín oslovení, přihlášení uživatelů, pravidla validace vstupu, výchozí řazení vlastníků |
+| Zrychlení výpisu vlastníků | hotovo: 5 SQL dotazů místo 103 (s filtrem obce 6 místo 153), index jako SQL migrace; výchozí řazení čeká na rozhodnutí |
 | Popis, jak naložit s celým CRM | čeká |
 
 ## 0. Testy před migrací
@@ -87,7 +87,13 @@ Nálezy, které se netýkají kompatibility (bezpečnost, ošetření vstupů, d
 
 ## 2. Zrychlení výpisu vlastníků
 
-Čeká. Postup: nejdřív zjistit příčinu (počet SQL dotazů, `EXPLAIN`), pak opravit a porovnat dotazy před a po. Dobu stránky neměříme, že je výpis pomalý, je zřejmé.
+Dobu stránky neměříme, že je výpis pomalý, je zřejmé. Důkazem je počet SQL dotazů v patičce a `EXPLAIN`. Čísla a plány před a po jsou v README (*Zrychlení výpisu vlastníků*).
+
+- **Příčina.** Patička ukázala 103 dotazů na stránku, s filtrem obce 153: pro každý z 50 řádků název obce a počet parcel, s filtrem navíc všechny parcely vlastníka. Na `ownerships.owner_id` chyběl index, takže dotaz na počet i na parcely prošel celou tabulku (1,2 mil. řádků, `ALL`).
+- **Oprava N+1.** `Section` dostala funkci volanou jednou se všemi řádky stránky. Výpis vlastníků v ní načte názvy obcí, počty parcel a parcely pro „V obci“ dotazy `in (…)`: 5 dotazů, s filtrem obce 6. Sloupec „V obci“ se dál počítá v PHP stejným porovnáním, protože `LIKE` s českou kolací by mohl najít jiné obce.
+- **Index.** `ownerships.owner_id` jako idempotentní SQL soubor, protože nasazení nemá migrační krok. Online, bez zamčení tabulky; kód funguje i bez něj. Postup, cena metadata locku a návrat v [MIGRATION.md](MIGRATION.md).
+- **Chování se nesmí změnit.** HTML výpisu se před a po změně porovnalo na obou verzích PHP pro 17 kombinací filtrů, hledání, řazení a stran: bajtově shodné.
+- **Co se záměrně neměnilo.** Výchozí řazení podle `concat(příjmení, jméno)`: 500 tisíc vlastníků má jen 1 070 různých jmen a pořadí uvnitř jména je neurčené, takže každá změna řazení nebo indexu přeskupí vlastníky na stranách. Je to rozhodnutí pro zadavatele ([OPENQUESTIONS.md](OPENQUESTIONS.md), otázka 5). Ze stejného důvodu není index na obec vlastníka (ověřeno: změní 1. stranu „Lhota“). `count(*)` je jeden průchod indexem a výpis ukazuje přesný počet. Filtr obce a N+1 ve výpisu parcel a obcí jsou samostatné položky v TODO.
 
 ## 3. Jak naložit s celým CRM
 

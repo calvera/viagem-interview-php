@@ -36,6 +36,29 @@ function owners_build_section(?Section $section = null, $for_export = false)
   return $section;
 }
 
+/**
+ * Loads the municipality name, parcel count and (with the municipality filter) the parcels
+ * for all owners on the page in one query each, instead of per row.
+ */
+function owners_list_prepare($rows, $section)
+{
+  $owner_ids = array_column($rows, 'id');
+  $names = municipality_names(array_column($rows, 'municipality_id'));
+  $counts = owners_parcel_counts($owner_ids);
+  $parcels = $section->hasFilter('municipality') ? owners_parcels($owner_ids) : array();
+
+  foreach ($rows as $i => $r)
+  {
+    $id = (int)$r['id'];
+    $municipality_id = (int)$r['municipality_id'];
+    $rows[$i]['_municipality_name'] = isset($names[$municipality_id]) ? $names[$municipality_id] : null;
+    $rows[$i]['parcel_count'] = isset($counts[$id]) ? $counts[$id] : '0';
+    $rows[$i]['_parcels'] = isset($parcels[$id]) ? $parcels[$id] : array();
+  }
+
+  return $rows;
+}
+
 function owners_list_row($r, $section)
 {
   $html = '<a href="index.php?url=owners/detail&amp;id=' . $r['id'] . '">' . h(owner_name($r)) . '</a>';
@@ -46,12 +69,11 @@ function owners_list_row($r, $section)
   $r['type_label'] = owner_type_label($r['type']);
   $r['birth_ico'] = $r['type'] == 'P' ? 'IČO ' . $r['ico'] : format_date($r['birth_date']);
 
-  $r['municipality_html'] = h(get_municipality_name($r['municipality_id']));
-  $r['parcel_count'] = owner_parcel_count($r['id']);
+  $r['municipality_html'] = h($r['_municipality_name']);
 
   if ($section->hasFilter('municipality'))
   {
-    $in = owner_parcels_in_municipality($r['id'], $section->getFilterValue('municipality'));
+    $in = parcels_in_municipality($r['_parcels'], $section->getFilterValue('municipality'));
     if ($in['cnt'] > 0) $r['in_municipality'] = $in['cnt'] . ' <small>(' . format_area($in['area']) . ')</small>';
     else $r['in_municipality'] = '<span class="muted">–</span>';
   }

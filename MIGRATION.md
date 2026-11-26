@@ -56,7 +56,7 @@ Aplikace potřebuje jen to, co je v `docker/php/app.ini`: `date.timezone = Europ
 
 ### Databáze
 
-Nic se nemění. Připojení (`utf8mb4`, `sql_mode = ''`, emulované prepared statements, typy a chyby jako v 7.4) nastavuje `Database::connect()`.
+Pro PHP 8.5 se v databázi nic nemění. Zrychlení výpisu vlastníků přidává jeden index, který se nasazuje samostatně a na verzi PHP nezávisí (kapitola 5). Připojení (`utf8mb4`, `sql_mode = ''`, emulované prepared statements, typy a chyby jako v 7.4) nastavuje `Database::connect()`.
 
 - Adresa databáze se čte z proměnné prostředí `DB_HOST` (`includes/config.php:14`, bez ní `db`). Nové PHP ji musí dostat stejně jako staré: Apache (`SetEnv` / `PassEnv`) nebo pool PHP-FPM (`env[DB_HOST] = …`, FPM ve výchozím stavu prostředí maže) a cron (proměnná v crontabu). **ověřit**, kde je nastavená dnes.
 - **doporučeno ověřit:** `select count(*) from ownerships where share_den = 0`. Na přepnutí to nemá vliv: neplatný podíl už na PHP 8 nic neshodí, do součtů výměry přispívá nulou a „Výměra podílu“ ukazuje „–“ (`share_area()`). Pokud takové řádky jsou, jde o chybu v datech, kterou je dobré opravit.
@@ -88,10 +88,14 @@ Noční report musí spouštět CLI nového PHP:
 
 1. Nahrát nový kód na server s PHP 7.4 (běžné nasazení změněných souborů).
    - Od opravy bezpečnostních chyb se mění zápis filtrů výpisů: místo `'{value}'` (v apostrofech) se píše `{value}` a hodnota se předává jako parametr. `class/Section.php`, `class/Database.php`, `includes/functions.php` a definice výpisů (`admin_owners/owners_functions.php`, `admin_parcels_main.php`, `admin_municipalities/municipalities_section.php`) proto nahrát najednou. Modul mimo tento repozitář, který má ve filtru dál `'{value}'`, selže bezpečně (chyba SQL nebo nic nenajde), nic neprozradí. **ověřit** v celém CRM, že žádný jiný modul nemá `{value}` v apostrofech, ani v podobě `'%{value}%'` u LIKE: projít všechny výskyty `grep -rn "{value}"` a případně je upravit ve stejném nasazení.
+   - Od zrychlení výpisu vlastníků načítá výpis data pro všechny řádky stránky najednou. `class/Section.php`, `includes/functions.php`, `admin_owners/owners_functions.php` a `admin_owners/owners_section.php` proto nahrát najednou. S novým `owners_functions.php` a starým `owners_section.php` by výpis nespadl, ale u každého řádku by potichu ukázal prázdnou obec, 0 parcel a šedý řádek (varování aplikace potlačuje).
+   - Z `includes/functions.php` zmizely `owner_parcel_count()` a `owner_parcels_in_municipality()` (nahradily je `owners_parcel_counts()`, `owners_parcels()` a `parcels_in_municipality()`). **ověřit** v celém CRM, že je žádný jiný modul nevolá: `grep -rn "owner_parcel_count\|owner_parcels_in_municipality"`; nalezená volání upravit ve stejném nasazení, jinak tam vznikne fatální chyba „Call to undefined function“.
 2. Ověřit na 7.4 (kapitola 4). Kód je pro 7.4 beze změny chování kromě oprav chyb v logice a bezpečnosti (CHANGELOG), které platí stejně na obou verzích.
 3. Připravit PHP 8.5 vedle 7.4 (rozšíření, `php.ini`), přepnout web (Apache / PHP-FPM) i cron na 8.5.
 4. Ověřit na 8.5 (kapitola 4).
 5. Návrat: přepnout web i cron zpět na PHP 7.4. Kód zůstává.
+
+Index z kapitoly 5 se dá přidat kdykoli, před nahráním kódu i po něm. Kód na něm nezávisí.
 
 ## 4. Ověření
 
@@ -108,3 +112,30 @@ APP_URL=https://<server> vendor/bin/phpunit --testsuite smoke
 ```
 
 Smoke testy počítají s testovacími daty (konkrétní vlastníci a IČO), na produkčních datech proto část selže; zelené mají být na kopii s vygenerovanými daty nebo v Dockeru. Lokálně před nasazením: unit, smoke a Playwright na obou verzích a PHPStan, příkazy v README.
+
+## 5. Index `ownerships.owner_id` (výpis vlastníků)
+
+Výpis vlastníků načítá počet parcel a parcely vlastníků na stránce dotazem `where owner_id in (…)` (úkol 2 v TODO.md). Bez indexu každý takový dotaz projde celou tabulku `ownerships` (1,2 mil. řádků, `EXPLAIN`: `ALL`), s indexem přečte jen řádky vlastníků na stránce (`range`, 120 řádků). Nasazení nemá migrační krok, proto je index jako SQL soubor [`sql/migrations/2026-11-26_ownerships_owner_id.sql`](sql/migrations/2026-11-26_ownerships_owner_id.sql), který se spustí ručně.
+
+- **Kód funguje i bez indexu.** Výpis má stejný výsledek a stejný počet dotazů (5, s filtrem obce 6), jen dotaz na počty parcel projde celou tabulku, s filtrem obce navíc dotaz na parcely (2 průchody na stránku). Na pořadí kroků proto nezáleží: index se dá přidat před nahráním kódu i po něm.
+- **Idempotentní.** `ADD INDEX IF NOT EXISTS`: druhé spuštění nic nezmění, skončí poznámkou `Note 1061: Duplicate key name` a návratovým kódem 0.
+- **Online.** `ALGORITHM=INPLACE, LOCK=NONE`: tabulka se nekopíruje a čtení i zápis běží dál. Kdyby server online variantu nepodporoval, příkaz skončí chybou a nic nezmění (nepřejde potichu na zamčení tabulky).
+- **Metadata lock.** Na začátku a na konci potřebuje `ALTER` krátký výhradní metadata lock na `ownerships`. Pokud nad tabulkou běží dlouhý dotaz nebo otevřená transakce (např. starý výpis vlastníků, noční report ve 2:15), `ALTER` na něj čeká a nové dotazy na `ownerships` čekají za ním. Soubor proto nastaví `lock_wait_timeout = 10`: když lock do 10 s nedostane, skončí chybou `Lock wait timeout exceeded` a stačí ho spustit znovu. Spouštět mimo noční report a ideálně mimo špičku.
+- **Náklady.** V Dockeru (1,2 mil. řádků) trvalo vytvoření indexu asi 1,5 s; oba vedlejší indexy tabulky mají dohromady 44 MB, nový index tedy zhruba 20 MB. Na produkci záleží na disku a zátěži, řádově jde o sekundy. Zápisy během stavby indexu se ukládají do dočasného logu (`innodb_online_alter_log_max_size`, výchozí 128 MB), což při běžném provozu nevadí.
+- **Práva.** Uživatel musí mít právo `ALTER` (resp. `INDEX`) na databázi. Aplikační uživatel ho mít nemusí, pak spustit jako správce databáze.
+
+Spuštění na produkci (název databáze a uživatele podle serveru):
+
+```bash
+mysql -u <admin> -p <databáze> --show-warnings < sql/migrations/2026-11-26_ownerships_owner_id.sql
+```
+
+Ověření: `SHOW INDEX FROM ownerships WHERE Key_name = 'idx_ownerships_owner';` vrátí jeden řádek a `EXPLAIN select count(*) from ownerships where owner_id in (1, 2)` ukazuje `key = idx_ownerships_owner`, `type = range`. V patičce výpisu vlastníků je 5 SQL dotazů (s filtrem obce 6).
+
+Návrat: `ALTER TABLE ownerships DROP INDEX IF EXISTS idx_ownerships_owner;` (také idempotentní). Kód funguje dál, jen pomaleji. Index se nemusí odebírat ani při návratu kódu na starší verzi; té index jen pomůže.
+
+Lokálně (Docker): databáze načte `docker/initdb` jen při prvním startu s prázdným svazkem, migrace se tam sama neprovede. Na existující databázi i po každém `docker compose down -v` ji spusťte ručně:
+
+```bash
+docker compose exec -T db mariadb -ucrm -pcrm legacy_crm --show-warnings < sql/migrations/2026-11-26_ownerships_owner_id.sql
+```

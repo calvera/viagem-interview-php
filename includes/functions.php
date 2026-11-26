@@ -202,20 +202,75 @@ function get_municipality_name($id)
   return $r ? $r['name'] : null;
 }
 
-function owner_parcel_count($owner_id)
+/**
+ * Comma separated integer ids for "in (...)".
+ */
+function sql_int_list($ids)
+{
+  return implode(', ', array_unique(array_map('intval', $ids)));
+}
+
+/**
+ * Municipality names by id in one query; missing municipalities are left out.
+ */
+function municipality_names($ids)
 {
   global $db;
 
-  $r = $db->queryOneResult("select count(*) as cnt from ownerships where owner_id = " . intval($owner_id));
-  return $r ? $r['cnt'] : null;
+  $names = array();
+  $res = $db->query("select id, name from municipalities where id in (" . sql_int_list($ids) . ")");
+  if (!$res) return $names;
+
+  while ($r = $res->fetch_assoc()) $names[$r['id']] = $r['name'];
+
+  return $names;
 }
 
-function owner_parcels_in_municipality($owner_id, $municipality)
+/**
+ * Parcel (ownership) counts by owner id in one query; owners without parcels are left out.
+ */
+function owners_parcel_counts($owner_ids)
+{
+  global $db;
+
+  $counts = array();
+  $res = $db->query("select owner_id, count(*) as cnt from ownerships
+    where owner_id in (" . sql_int_list($owner_ids) . ") group by owner_id");
+  if (!$res) return $counts;
+
+  while ($r = $res->fetch_assoc()) $counts[$r['owner_id']] = $r['cnt'];
+
+  return $counts;
+}
+
+/**
+ * Parcels of the owners with share and municipality name, grouped by owner id, in one query.
+ * Each owner's parcels are in the same order as in owner_parcels().
+ */
+function owners_parcels($owner_ids)
+{
+  global $db;
+
+  $list = array();
+  $res = $db->query("select os.owner_id, os.share_num, os.share_den, p.area_m2, m.name as municipality_name
+    from ownerships os
+    left join parcels p on p.id = os.parcel_id
+    left join municipalities m on m.id = p.municipality_id
+    where os.owner_id in (" . sql_int_list($owner_ids) . ")
+    order by os.owner_id, m.name, p.cadastral_area, p.parcel_number");
+  if (!$res) return $list;
+
+  while ($r = $res->fetch_assoc()) $list[$r['owner_id']][] = $r;
+
+  return $list;
+}
+
+/**
+ * Count and share area of the parcels whose municipality name contains $municipality (case-insensitive).
+ */
+function parcels_in_municipality($parcels, $municipality)
 {
   $result = array('cnt' => 0, 'area' => 0);
-
-  $parcels = owner_parcels($owner_id);
-  if (!count($parcels)) return $result;
 
   foreach ($parcels as $p)
   {

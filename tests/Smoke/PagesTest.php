@@ -198,6 +198,64 @@ class PagesTest extends TestCase
   }
 
   /**
+   * Municipality, parcel count and "V obci" (parcels in municipalities whose name contains the filter, with share area)
+   * for owners on a page that fits all matches, so the order does not matter. Values from v2.7.8.
+   *
+   * @dataProvider inMunicipalityProvider
+   */
+  public function testInMunicipalityColumn($path, $owner_id, $municipality, $parcels, $in_municipality)
+  {
+    $response = $this->get($path);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertMatchesRegularExpression('~<tr><td class="col_html"><a href="index.php\?url=owners/detail&amp;id=' . $owner_id . '">'
+      . '(?:(?!</tr>).)*<td class="col_html">' . preg_quote($municipality, '~') . '</td><td class="col_int">' . $parcels . '</td>'
+      . '<td class="col_html">' . preg_quote($in_municipality, '~') . '</td>~u',
+      $response['body']);
+  }
+
+  public function inMunicipalityProvider()
+  {
+    $lhota = '/index.php?url=owners&f_municipality=Lhota&search=Agro+Bukovina';
+    $kopec = '/index.php?url=owners&f_municipality=Doln%C3%AD+Lhota+na+Kopci';
+
+    return array(
+      'all parcels in municipality, ha' => array($lhota, 476928, 'Přední Lhota u Kamene', 3, '3 <small>(1,01 ha)</small>'),
+      'all parcels in municipality, m²' => array($lhota, 422928, 'Přední Lhota pod Horou', 2, '2 <small>(1 518 m²)</small>'),
+      'some parcels elsewhere' => array($lhota, 224928, 'Přední Lhota u Brodu', 4, '2 <small>(1,74 ha)</small>'),
+      'no parcel in municipality' => array($kopec, 435982, 'Dolní Lhota na Kopci', 2, '<span class="muted">–</span>'),
+    );
+  }
+
+  /**
+   * Without the municipality filter: municipality and parcel count; an owner without parcels has 0 and a grey row.
+   * Values from v2.7.8.
+   *
+   * @dataProvider ownerRowProvider
+   */
+  public function testOwnerRowMunicipalityAndParcels($path, $owner_id, $row_start, $municipality, $parcels)
+  {
+    $response = $this->get($path);
+
+    $this->assertSame(200, $response['status']);
+    $this->assertNoPhpError($response['body']);
+    $this->assertStringNotContainsString('V obci', $response['body']);
+    $this->assertMatchesRegularExpression('~' . preg_quote($row_start, '~') . '<td class="col_html"><a href="index.php\?url=owners/detail&amp;id=' . $owner_id . '">'
+      . '(?:(?!</tr>).)*<td class="col_html">' . preg_quote($municipality, '~') . '</td><td class="col_int">' . $parcels . '</td>'
+      . '<td class="col_html"><span~u',
+      $response['body']);
+  }
+
+  public function ownerRowProvider()
+  {
+    return array(
+      'owner with parcels' => array('/index.php?url=owners&search=01256748', 12, '<tr>', 'Dolní Dubenka nad Lesem', 3),
+      'owner without parcels' => array('/index.php?url=owners&search=86750415', 305424, '<tr class="no_parcels">', 'Stará Javornice nad Lesem', 0),
+    );
+  }
+
+  /**
    * Notes are deleted only by POST; a GET with delete_note is ignored.
    * A nonexistent note id, so nothing is deleted even if this check fails.
    */

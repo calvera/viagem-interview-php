@@ -4,6 +4,19 @@ Formát vychází z [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/). St
 
 ## [Nevydáno]
 
+## [2.7.9] – 2026-11-26
+
+### Změněno
+
+- Výpis vlastníků: název obce, počet parcel a s filtrem obce i parcely pro sloupec „V obci“ se načtou jednou za stránku dotazem `in (…)` místo dotazu na každý řádek (`Section::setRowsPrepareFunction()`, `owners_list_prepare()`). Stránka má 5 SQL dotazů místo 103, s filtrem obce 6 místo 153. „V obci“ se dál filtruje v PHP stejným `mb_stripos`, HTML výpisu je stejné jako dříve (ověřeno porovnáním na PHP 7.4 i 8.5).
+- `owner_parcel_count()` a `owner_parcels_in_municipality()` nahradily `owners_parcel_counts()`, `owners_parcels()` a `parcels_in_municipality()`; přibyly `municipality_names()` a `sql_int_list()`.
+
+### Přidáno
+
+- SQL migrace `sql/migrations/2026-11-26_ownerships_owner_id.sql`: index `idx_ownerships_owner` na `ownerships.owner_id` (idempotentní, online). Postup nasazení v `MIGRATION.md`. Kód funguje i bez indexu, jen pomaleji.
+- Smoke testy obce, počtu parcel (i vlastník bez parcel, šedý řádek) a hodnot „V obci“ s filtrem obce; unit testy `Section::setRowsPrepareFunction()` (jednou se všemi řádky před funkcí řádku, prázdná strana bez volání), `parcels_in_municipality()`, `sql_int_list()` a dávkových dotazů při chybě SQL.
+- `OPENQUESTIONS.md`: otázka 5, výchozí řazení výpisu vlastníků.
+
 ## [2.7.8] – 2026-11-26
 
 ### Bezpečnost

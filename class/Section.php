@@ -15,6 +15,7 @@ class Section
   public $limit;
   public $select_items;
   public $row_function;
+  public $rows_prepare_function;
   public $detail_url;
   public $export_url;
   public $search_value;
@@ -36,6 +37,7 @@ class Section
     $this->limit = LIST_LIMIT;
     $this->select_items = array();
     $this->row_function = null;
+    $this->rows_prepare_function = null;
     $this->detail_url = '';
     $this->export_url = '';
     $this->search_value = '';
@@ -58,6 +60,12 @@ class Section
   function addJoin($sql) { $this->sql_join[] = $sql; }
   function addSQLWhereString($sql) { $this->sql_where[] = $sql; }
   function setRowShowFunction($fn) { $this->row_function = $fn; }
+
+  /**
+   * Function called once with all rows of the page before the row function,
+   * so it can load related data in one query instead of one query per row.
+   */
+  function setRowsPrepareFunction($fn) { $this->rows_prepare_function = $fn; }
 
   /*
   *   SLOUPCE
@@ -202,14 +210,18 @@ class Section
     if (!$res) return false;
 
     $rows = array();
-    while ($r = $res->fetch_assoc())
+    while ($r = $res->fetch_assoc()) $rows[] = $r;
+
+    if ($this->rows_prepare_function && count($rows))
     {
-      if ($this->row_function)
-      {
-        $fn = $this->row_function;
-        $r = $fn($r, $this);
-      }
-      $rows[] = $r;
+      $fn = $this->rows_prepare_function;
+      $rows = $fn($rows, $this);
+    }
+
+    if ($this->row_function)
+    {
+      $fn = $this->row_function;
+      foreach ($rows as $i => $r) $rows[$i] = $fn($r, $this);
     }
 
     return $rows;

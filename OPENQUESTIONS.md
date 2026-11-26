@@ -62,3 +62,19 @@ Pole, které v odeslaném formuláři chybí úplně, se uloží jako prázdné 
 - Jaká pravidla mají platit pro jednotlivá pole (povinná pole, formát telefonu, PSČ jen česká, rozsah termínu oslovení)? Dnes se kontroluje jen příjmení / název, e-mail, PSČ (5 číslic) a platné datum.
 - **Délka polí se nekontroluje nikde.** Sloupce v `owners` mají omezenou délku (`title` 30, `first_name` 60, `last_name` 160, `street` a `city` 120, `zip` 6, `phone` 20, `email` 120 znaků). Databáze běží se `sql_mode = ''`, takže delší hodnotu potichu ořízne a uloží; uživatel se o tom nedozví. Má delší hodnota být chybou validace?
 - **Kontrola v prohlížeči neexistuje.** Formulář má jen `type="date"` u termínu oslovení; žádné `required`, `maxlength`, `type="email"` ani JavaScript. Chceme kontrolu i v prohlížeči (rychlejší odezva pro uživatele), nebo stačí server? Kontrola na serveru zůstává v každém případě.
+
+## 5. Výchozí řazení výpisu vlastníků
+
+**Stav:** otevřená, blokuje položku *Výchozí řazení vlastníků* v `TODO.md` (sekce *Výkon*).
+
+Výpis vlastníků se ve výchozím stavu řadí podle `concat(o.last_name, ' ', o.first_name)` (`admin_owners/owners_functions.php`). Na výraz nejde použít index, takže každá strana výpisu přečte a seřadí všech 500 tisíc vlastníků (`EXPLAIN`: `ALL`, `Using filesort`).
+
+Řazení navíc není jednoznačné: 500 000 vlastníků má jen 1 070 různých jmen (asi 470 vlastníků na jedno jméno). Pořadí vlastníků se stejným jménem databáze neurčuje a závisí na plánu dotazu. Proto každá změna řazení nebo indexu změní, kteří vlastníci jsou na které straně (jména na stranách zůstanou, vlastníci se stejným jménem se přeskupí). Při stránkování se navíc může stát, že se vlastník se stejným jménem objeví na dvou stranách nebo na žádné.
+
+**Varianty:**
+
+- a) Ponechat jako dnes.
+- b) Řadit podle `last_name, first_name, id` s indexem `(last_name, first_name, id)`. Databáze pak může stranu výpisu číst z indexu bez řazení všech vlastníků (ověřit `EXPLAIN` po přidání indexu) a pořadí je jednoznačné. Index je další SQL migrace (500 tisíc řádků, online).
+- c) Jen doplnit `id` jako rozhodující kritérium (`concat(…), id`). Pořadí je jednoznačné, ale výpis dál řadí všech 500 tisíc vlastníků.
+
+**Doporučení:** b). Na testovacích datech řadí `concat` i dvojice sloupců všech 1 070 jmen stejně (ověřeno porovnáním seznamů). Před změnou je potřeba totéž ověřit na produkčních datech: liší se např. u prázdného `first_name` (`NULL` udělá z celého `concat` `NULL`, takový vlastník je na začátku) nebo u příjmení s mezerou.

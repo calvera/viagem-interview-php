@@ -17,11 +17,11 @@ Omezení ze zadání: nasazuje se nahráním změněných souborů bez build kro
    - [x] Unit, smoke i Playwright testy (úkol 0) zelené na PHP 7.4 i 8.5.
    - [x] Ověřit noční report v Dockeru na obou verzích (`php74`, `php85`).
    - [x] Statická analýza (PHPStan) pro PHP 7.4 i 8.5, ať se chyby najdou i mimo prošlé stránky.
-2. [ ] **Zrychlit výpis vlastníků** – viz sekce *Výkon*.
-   - [ ] Nejdřív zjistit příčinu: počet SQL dotazů (patička) a `EXPLAIN` hlavních dotazů, s filtrem obce i bez něj. Dobu stránky neměřit, že je výpis pomalý, je zřejmé.
-   - [ ] Opravit podle zjištěné příčiny (N+1 dotazy, index `ownerships.owner_id`, řazení, `count(*)` nad 500 tis. řádků).
-   - [ ] Změnu schématu (index) dodat jako SQL migraci s návodem pro nasazení, protože nasazení nemá migrační krok.
-   - [ ] Počet SQL dotazů a `EXPLAIN` před a po zapsat do README.
+2. [x] **Zrychlit výpis vlastníků** – viz sekce *Výkon*. Výchozí řazení zůstává jako dosud, rozhodnutí je otevřená otázka 5 v `OPENQUESTIONS.md`. (v2.7.9, 2026-11-26)
+   - [x] Nejdřív zjistit příčinu: počet SQL dotazů (patička) a `EXPLAIN` hlavních dotazů, s filtrem obce i bez něj. Dobu stránky neměřit, že je výpis pomalý, je zřejmé. Patička: 103 dotazů bez filtru, 153 s `f_municipality=Lhota`. Na každý řádek dotaz na název obce (`const`, levný) a `count(*)` z `ownerships` podle `owner_id` (`ALL`, 1,2 mil. řádků, bez indexu), s filtrem obce navíc všechny parcely vlastníka (také `ALL`). Tedy 50, resp. 100 průchodů celou tabulkou `ownerships` na stránku.
+   - [x] Opravit podle zjištěné příčiny (N+1 dotazy, index `ownerships.owner_id`, řazení, `count(*)` nad 500 tis. řádků). N+1: názvy obcí, počty parcel a parcely pro „V obci“ se načtou jednou za stránku dotazem `in (…)` (`Section::setRowsPrepareFunction()`, `owners_list_prepare()`), 5 dotazů bez filtru, 6 s filtrem obce. Index `idx_ownerships_owner`: dotazy `in (…)` čtou 120 řádků z indexu místo 1,2 mil. Řazení beze změny: 500 tis. vlastníků má jen 1 070 různých jmen, pořadí uvnitř jména je neurčené a každá změna řazení nebo indexu přeskupí vlastníky na stranách (otázka 5 v `OPENQUESTIONS.md`). `count(*)` beze změny: jeden průchod indexem za stránku (`index`, `Using index`) a výpis ukazuje přesný počet.
+   - [x] Změnu schématu (index) dodat jako SQL migraci s návodem pro nasazení, protože nasazení nemá migrační krok. `sql/migrations/2026-11-26_ownerships_owner_id.sql`, návod v `MIGRATION.md`.
+   - [x] Počet SQL dotazů a `EXPLAIN` před a po zapsat do README.
 3. [ ] **Popsat, jak naložit s celým CRM** – nejvýše 2 strany (540 tis. řádků, 32 modulů, vlastní framework, bez testů, nasazení nahráním souborů, 2–3 vývojáři).
 
 Odevzdání:
@@ -76,11 +76,11 @@ Z revize kódu (listopad 2026). Položky označené ✔ jsou ověřené (`php -l
 
 ### Výkon
 
-- [ ] N+1 dotazy ve výpisu vlastníků: název obce a počet parcel pro každý řádek, s filtrem obce navíc všechny parcely vlastníka (`owners_list_row()`).
-- [ ] Filtr obce ve výpisu vlastníků. Odkaz „vlastníci“ z výpisu obcí (`admin_municipalities/municipalities_section.php:8`) posílá název obce a filtr hledá podřetězec (`m.name like %…%`), takže „Lhota“ najde 20 000 vlastníků místo 240 (i Horní, Dolní… Lhota). Sloupec „V obci“ pro každý řádek načte všechny parcely vlastníka a filtruje je v PHP přes `mb_stripos` (`owner_parcels_in_municipality()`), opět podle podřetězce. Změřeno na PHP 8.5: bez filtru 8,1 s, „Lhota“ 21,3 s, „Horní Lhota“ (2 000 vlastníků) 24,0 s, zdržuje tedy práce na řádku, ne počet nalezených. Řešení: odkaz přes id (`f_municipality_id`, skrytý filtr v `Section`), „V obci“ spočítat v SQL podle `p.municipality_id`. Co filtr znamená (obec vlastníka, nebo vlastníci parcel v obci), viz `OPENQUESTIONS.md`, otázka 1.
+- [x] N+1 dotazy ve výpisu vlastníků: název obce a počet parcel pro každý řádek, s filtrem obce navíc všechny parcely vlastníka (`owners_list_row()`). Načítají se jednou za stránku dotazy `in (…)` (`owners_list_prepare()`); 103 → 5 dotazů, s filtrem obce 153 → 6. HTML výpisu je stejné jako dříve. (v2.7.9, 2026-11-26)
+- [ ] Filtr obce ve výpisu vlastníků. Odkaz „vlastníci“ z výpisu obcí (`admin_municipalities/municipalities_section.php:8`) posílá název obce a filtr hledá podřetězec (`m.name like %…%`), takže „Lhota“ najde 20 000 vlastníků místo 240 (i Horní, Dolní… Lhota). Sloupec „V obci“ pro každý řádek načte všechny parcely vlastníka a filtruje je v PHP přes `mb_stripos` (dříve `owner_parcels_in_municipality()`, teď `parcels_in_municipality()`), opět podle podřetězce. Změřeno na PHP 8.5: bez filtru 8,1 s, „Lhota“ 21,3 s, „Horní Lhota“ (2 000 vlastníků) 24,0 s, zdržuje tedy práce na řádku, ne počet nalezených. Řešení: odkaz přes id (`f_municipality_id`, skrytý filtr v `Section`), „V obci“ spočítat v SQL podle `p.municipality_id`. Co filtr znamená (obec vlastníka, nebo vlastníci parcel v obci), viz `OPENQUESTIONS.md`, otázka 1. Hotovo v rámci N+1 (úkol 2): parcely pro „V obci“ se už nenačítají pro každý řádek, ale jedním dotazem za stránku; filtrují se dál v PHP stejným `mb_stripos`, aby se výsledek nezměnil. Zbývá: odkaz přes id, „V obci“ v SQL a samotný filtr (`like %…%` přes všechny vlastníky, `ALL`).
 - [ ] N+1 dotazy ve výpisu parcel (vlastníci každé parcely) a obcí (počet parcel každé obce).
-- [ ] Chybí index `ownerships.owner_id` (1,2 mil. řádků).
-- [ ] Výchozí řazení vlastníků `concat(last_name, ' ', first_name)` nevyužije index.
+- [x] Chybí index `ownerships.owner_id` (1,2 mil. řádků). SQL migrace `sql/migrations/2026-11-26_ownerships_owner_id.sql` (idempotentní, online), postup v `MIGRATION.md`. Index na `owners.municipality_id` záměrně ne: změní plán dotazu s filtrem obce a s ním pořadí vlastníků se stejným jménem na stranách. (v2.7.9, 2026-11-26)
+- [ ] Výchozí řazení vlastníků `concat(last_name, ' ', first_name)` nevyužije index. Čeká na rozhodnutí: otázka 5 v `OPENQUESTIONS.md` (změna řazení přeskupí vlastníky se stejným jménem na stranách).
 
 ### Chyby v logice
 
