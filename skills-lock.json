@@ -8,6 +8,13 @@
       "skillPath": ".claude/skills/analyse-with-phpstan/SKILL.md",
       "computedHash": "40e83bcfd8e05773c8868bff886d43b64f62943b46bd7cb6aaadfe8897a9e8b6"
     },
+    "mariadb-query-optimization": {
+      "source": "MariaDB/skills",
+      "commit": "5895ef8da1908d5b438d8ccb48653bcecedc090a",
+      "sourceType": "github",
+      "skillPath": "mariadb-query-optimization/SKILL.md",
+      "computedHash": "dc1ebcfe7455bdbcc37e8a2957e9964a7800345882144aee0b223dc48940c5f9"
+    },
     "php-best-practices": {
       "source": "AsyrafHussin/agent-skills",
       "commit": "1aa0ff717c10309226c9e678f00873976450fd76",
